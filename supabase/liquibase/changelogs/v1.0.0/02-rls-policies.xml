@@ -1,0 +1,144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Row Level Security Policies for Restaurant Inventory Management v1.0.0 -->
+
+    <!-- Enable RLS on all tables -->
+    <changeSet id="8" author="system" context="dev,staging,prod">
+        <comment>Enable Row Level Security on all tables</comment>
+        <sql>
+            ALTER TABLE restaurants ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE user_profiles ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE suppliers ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE inventory_items ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE stock_transactions ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
+        </sql>
+        <rollback>
+            ALTER TABLE restaurants DISABLE ROW LEVEL SECURITY;
+            ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
+            ALTER TABLE suppliers DISABLE ROW LEVEL SECURITY;
+            ALTER TABLE inventory_items DISABLE ROW LEVEL SECURITY;
+            ALTER TABLE stock_transactions DISABLE ROW LEVEL SECURITY;
+            ALTER TABLE alerts DISABLE ROW LEVEL SECURITY;
+        </rollback>
+    </changeSet>
+
+    <!-- User profiles policies -->
+    <changeSet id="9" author="system" context="dev,staging,prod">
+        <comment>Create RLS policies for user_profiles</comment>
+        <sql>
+            -- Users can view their own profile
+            CREATE POLICY "Users can view own profile" ON user_profiles
+                FOR SELECT USING (auth.uid() = id);
+
+            -- Users can update their own profile
+            CREATE POLICY "Users can update own profile" ON user_profiles
+                FOR UPDATE USING (auth.uid() = id);
+
+            -- Service role can do everything
+            CREATE POLICY "Service role full access" ON user_profiles
+                FOR ALL USING (current_setting('role') = 'service_role');
+        </sql>
+        <rollback>
+            DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Service role full access" ON user_profiles;
+        </rollback>
+    </changeSet>
+
+    <!-- Restaurant data policies (restaurant-specific isolation) -->
+    <changeSet id="10" author="system" context="dev,staging,prod">
+        <comment>Create RLS policies for restaurant data isolation</comment>
+        <sql>
+            -- Restaurants: Users can only access their own restaurant
+            CREATE POLICY "Users access own restaurant" ON restaurants
+                FOR ALL USING (
+                    id IN (
+                        SELECT restaurant_id FROM user_profiles
+                        WHERE id = auth.uid()
+                    )
+                );
+
+            -- Suppliers: Users can only access suppliers from their restaurant
+            CREATE POLICY "Users access own restaurant suppliers" ON suppliers
+                FOR ALL USING (
+                    restaurant_id IN (
+                        SELECT restaurant_id FROM user_profiles
+                        WHERE id = auth.uid()
+                    )
+                );
+
+            -- Inventory Items: Users can only access items from their restaurant
+            CREATE POLICY "Users access own restaurant inventory" ON inventory_items
+                FOR ALL USING (
+                    restaurant_id IN (
+                        SELECT restaurant_id FROM user_profiles
+                        WHERE id = auth.uid()
+                    )
+                );
+
+            -- Stock Transactions: Users can only access transactions from their restaurant
+            CREATE POLICY "Users access own restaurant transactions" ON stock_transactions
+                FOR ALL USING (
+                    restaurant_id IN (
+                        SELECT restaurant_id FROM user_profiles
+                        WHERE id = auth.uid()
+                    )
+                );
+
+            -- Alerts: Users can only access alerts from their restaurant
+            CREATE POLICY "Users access own restaurant alerts" ON alerts
+                FOR ALL USING (
+                    restaurant_id IN (
+                        SELECT restaurant_id FROM user_profiles
+                        WHERE id = auth.uid()
+                    )
+                );
+        </sql>
+        <rollback>
+            DROP POLICY IF EXISTS "Users access own restaurant" ON restaurants;
+            DROP POLICY IF EXISTS "Users access own restaurant suppliers" ON suppliers;
+            DROP POLICY IF EXISTS "Users access own restaurant inventory" ON inventory_items;
+            DROP POLICY IF EXISTS "Users access own restaurant transactions" ON stock_transactions;
+            DROP POLICY IF EXISTS "Users access own restaurant alerts" ON alerts;
+        </rollback>
+    </changeSet>
+
+    <!-- Manager-only policies -->
+    <changeSet id="11" author="system" context="dev,staging,prod">
+        <comment>Create manager-only policies for sensitive operations</comment>
+        <sql>
+            -- Only managers can create/update/delete suppliers
+            CREATE POLICY "Manager only supplier management" ON suppliers
+                FOR ALL USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles
+                        WHERE id = auth.uid()
+                        AND role = 'manager'
+                        AND restaurant_id = suppliers.restaurant_id
+                    )
+                );
+
+            -- Only managers can delete inventory items
+            CREATE POLICY "Manager only inventory deletion" ON inventory_items
+                FOR DELETE USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles
+                        WHERE id = auth.uid()
+                        AND role = 'manager'
+                        AND restaurant_id = inventory_items.restaurant_id
+                    )
+                );
+        </sql>
+        <rollback>
+            DROP POLICY IF EXISTS "Manager only supplier management" ON suppliers;
+            DROP POLICY IF EXISTS "Manager only inventory deletion" ON inventory_items;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

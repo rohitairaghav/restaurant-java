@@ -1,0 +1,46 @@
+name: Build Mobile App
+
+on:
+  push:
+    branches: [main]
+    paths: ['apps/mobile/**', 'packages/**']
+  pull_request:
+    branches: [main]
+    paths: ['apps/mobile/**', 'packages/**']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Setup Expo
+        uses: expo/expo-github-action@v8
+        with:
+          expo-version: latest
+          token: ${{ secrets.EXPO_TOKEN }}
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npm run type-check
+        working-directory: apps/mobile
+
+      - name: EAS Build (Development)
+        run: eas build --platform all --profile development --non-interactive
+        working-directory: apps/mobile
+        if: github.event_name == 'pull_request'
+
+      - name: EAS Build (Preview)
+        run: eas build --platform all --profile preview --non-interactive
+        working-directory: apps/mobile
+        if: github.ref == 'refs/heads/main'

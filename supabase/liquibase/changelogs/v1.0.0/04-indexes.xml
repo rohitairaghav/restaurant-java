@@ -1,0 +1,147 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Database Indexes for Restaurant Inventory Management v1.0.0 -->
+
+    <!-- Performance indexes for user_profiles -->
+    <changeSet id="18" author="system" context="dev,staging,prod">
+        <comment>Create performance indexes for user_profiles</comment>
+        <createIndex tableName="user_profiles" indexName="idx_user_profiles_restaurant_id">
+            <column name="restaurant_id"/>
+        </createIndex>
+        <createIndex tableName="user_profiles" indexName="idx_user_profiles_email">
+            <column name="email"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="user_profiles" indexName="idx_user_profiles_restaurant_id"/>
+            <dropIndex tableName="user_profiles" indexName="idx_user_profiles_email"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Performance indexes for suppliers -->
+    <changeSet id="19" author="system" context="dev,staging,prod">
+        <comment>Create performance indexes for suppliers</comment>
+        <createIndex tableName="suppliers" indexName="idx_suppliers_restaurant_id">
+            <column name="restaurant_id"/>
+        </createIndex>
+        <createIndex tableName="suppliers" indexName="idx_suppliers_name">
+            <column name="name"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="suppliers" indexName="idx_suppliers_restaurant_id"/>
+            <dropIndex tableName="suppliers" indexName="idx_suppliers_name"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Performance indexes for inventory_items -->
+    <changeSet id="20" author="system" context="dev,staging,prod">
+        <comment>Create performance indexes for inventory_items</comment>
+        <createIndex tableName="inventory_items" indexName="idx_inventory_items_restaurant_id">
+            <column name="restaurant_id"/>
+        </createIndex>
+        <createIndex tableName="inventory_items" indexName="idx_inventory_items_supplier_id">
+            <column name="supplier_id"/>
+        </createIndex>
+        <createIndex tableName="inventory_items" indexName="idx_inventory_items_category">
+            <column name="category"/>
+        </createIndex>
+        <createIndex tableName="inventory_items" indexName="idx_inventory_items_name">
+            <column name="name"/>
+        </createIndex>
+        <createIndex tableName="inventory_items" indexName="idx_inventory_items_stock_levels">
+            <column name="current_stock"/>
+            <column name="min_threshold"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="inventory_items" indexName="idx_inventory_items_restaurant_id"/>
+            <dropIndex tableName="inventory_items" indexName="idx_inventory_items_supplier_id"/>
+            <dropIndex tableName="inventory_items" indexName="idx_inventory_items_category"/>
+            <dropIndex tableName="inventory_items" indexName="idx_inventory_items_name"/>
+            <dropIndex tableName="inventory_items" indexName="idx_inventory_items_stock_levels"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Performance indexes for stock_transactions -->
+    <changeSet id="21" author="system" context="dev,staging,prod">
+        <comment>Create performance indexes for stock_transactions</comment>
+        <createIndex tableName="stock_transactions" indexName="idx_stock_transactions_restaurant_id">
+            <column name="restaurant_id"/>
+        </createIndex>
+        <createIndex tableName="stock_transactions" indexName="idx_stock_transactions_item_id">
+            <column name="item_id"/>
+        </createIndex>
+        <createIndex tableName="stock_transactions" indexName="idx_stock_transactions_user_id">
+            <column name="user_id"/>
+        </createIndex>
+        <createIndex tableName="stock_transactions" indexName="idx_stock_transactions_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        <createIndex tableName="stock_transactions" indexName="idx_stock_transactions_type">
+            <column name="type"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="stock_transactions" indexName="idx_stock_transactions_restaurant_id"/>
+            <dropIndex tableName="stock_transactions" indexName="idx_stock_transactions_item_id"/>
+            <dropIndex tableName="stock_transactions" indexName="idx_stock_transactions_user_id"/>
+            <dropIndex tableName="stock_transactions" indexName="idx_stock_transactions_created_at"/>
+            <dropIndex tableName="stock_transactions" indexName="idx_stock_transactions_type"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Performance indexes for alerts -->
+    <changeSet id="22" author="system" context="dev,staging,prod">
+        <comment>Create performance indexes for alerts</comment>
+        <createIndex tableName="alerts" indexName="idx_alerts_restaurant_id">
+            <column name="restaurant_id"/>
+        </createIndex>
+        <createIndex tableName="alerts" indexName="idx_alerts_item_id">
+            <column name="item_id"/>
+        </createIndex>
+        <createIndex tableName="alerts" indexName="idx_alerts_is_read">
+            <column name="is_read"/>
+        </createIndex>
+        <createIndex tableName="alerts" indexName="idx_alerts_type">
+            <column name="type"/>
+        </createIndex>
+        <createIndex tableName="alerts" indexName="idx_alerts_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="alerts" indexName="idx_alerts_restaurant_id"/>
+            <dropIndex tableName="alerts" indexName="idx_alerts_item_id"/>
+            <dropIndex tableName="alerts" indexName="idx_alerts_is_read"/>
+            <dropIndex tableName="alerts" indexName="idx_alerts_type"/>
+            <dropIndex tableName="alerts" indexName="idx_alerts_created_at"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Composite indexes for common queries -->
+    <changeSet id="23" author="system" context="dev,staging,prod">
+        <comment>Create composite indexes for common query patterns</comment>
+        <sql>
+            -- Index for unread alerts by restaurant
+            CREATE INDEX idx_alerts_unread_by_restaurant
+            ON alerts (restaurant_id, is_read, created_at DESC)
+            WHERE is_read = false;
+
+            -- Index for recent transactions by restaurant
+            CREATE INDEX idx_stock_transactions_recent_by_restaurant
+            ON stock_transactions (restaurant_id, created_at DESC);
+
+            -- Index for low stock items by restaurant
+            CREATE INDEX idx_inventory_low_stock_by_restaurant
+            ON inventory_items (restaurant_id, current_stock, min_threshold)
+            WHERE current_stock &lt;= min_threshold;
+        </sql>
+        <rollback>
+            DROP INDEX IF EXISTS idx_alerts_unread_by_restaurant;
+            DROP INDEX IF EXISTS idx_stock_transactions_recent_by_restaurant;
+            DROP INDEX IF EXISTS idx_inventory_low_stock_by_restaurant;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

@@ -1,0 +1,234 @@
+import { create } from 'zustand';
+import type { InventoryItem, InventoryItemInput, Supplier } from '@restaurant-inventory/shared';
+import { createClient } from '../supabase';
+import { isDemoMode } from '../demo-mode';
+import { mockInventoryItems, mockSuppliers } from '../mock-data';
+
+interface InventoryState {
+  items: InventoryItem[];
+  suppliers: Supplier[];
+  loading: boolean;
+  error: string | null;
+
+  // Actions
+  fetchItems: () => Promise<void>;
+  fetchSuppliers: () => Promise<void>;
+  addItem: (item: InventoryItemInput) => Promise<void>;
+  updateItem: (id: string, updates: Partial<InventoryItem>) => Promise<void>;
+  deleteItem: (id: string) => Promise<void>;
+  addSupplier: (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+}
+
+export const useInventoryStore = create<InventoryState>((set, get) => ({
+  items: [],
+  suppliers: [],
+  loading: false,
+  error: null,
+
+  fetchItems: async () => {
+    set({ loading: true, error: null });
+    try {
+      if (isDemoMode()) {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+        set({ items: mockInventoryItems, loading: false });
+        return;
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .select('*, suppliers(name)')
+        .order('name');
+
+      if (error) throw error;
+      set({ items: data || [], loading: false });
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+    }
+  },
+
+  fetchSuppliers: async () => {
+    try {
+      if (isDemoMode()) {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 300));
+        set({ suppliers: mockSuppliers });
+        return;
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('suppliers')
+        .select('*')
+        .order('name');
+
+      if (error) throw error;
+      set({ suppliers: data || [] });
+    } catch (error: any) {
+      set({ error: error.message });
+    }
+  },
+
+  addItem: async (item: InventoryItemInput) => {
+    set({ loading: true, error: null });
+    try {
+      if (isDemoMode()) {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        // Create a new item with demo data
+        const newItem = {
+          ...item,
+          id: `item-${Date.now()}`,
+          current_stock: 0, // New items start with 0 stock
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        // Find supplier name for display
+        const supplier = mockSuppliers.find(s => s.id === item.supplier_id);
+        const itemWithSupplier = {
+          ...newItem,
+          suppliers: supplier ? { name: supplier.name } : null
+        };
+
+        set(state => ({
+          items: [...state.items, itemWithSupplier],
+          loading: false
+        }));
+        return;
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .insert(item)
+        .select('*, suppliers(name)')
+        .single();
+
+      if (error) throw error;
+
+      set(state => ({
+        items: [...state.items, data],
+        loading: false
+      }));
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+    }
+  },
+
+  updateItem: async (id: string, updates: Partial<InventoryItem>) => {
+    set({ loading: true, error: null });
+    try {
+      if (isDemoMode()) {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 500));
+
+        set(state => {
+          const updatedItems = state.items.map(item => {
+            if (item.id === id) {
+              const updatedItem = { ...item, ...updates, updated_at: new Date().toISOString() };
+
+              // Update supplier info if supplier_id changed
+              if (updates.supplier_id !== undefined) {
+                const supplier = mockSuppliers.find(s => s.id === updates.supplier_id);
+                updatedItem.suppliers = supplier ? { name: supplier.name } : null;
+              }
+
+              return updatedItem;
+            }
+            return item;
+          });
+
+          return { items: updatedItems, loading: false };
+        });
+        return;
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('inventory_items')
+        .update(updates)
+        .eq('id', id)
+        .select('*, suppliers(name)')
+        .single();
+
+      if (error) throw error;
+
+      set(state => ({
+        items: state.items.map(item => item.id === id ? data : item),
+        loading: false
+      }));
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+    }
+  },
+
+  deleteItem: async (id: string) => {
+    set({ loading: true, error: null });
+    try {
+      if (isDemoMode()) {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        set(state => ({
+          items: state.items.filter(item => item.id !== id),
+          loading: false
+        }));
+        return;
+      }
+
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('inventory_items')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+
+      set(state => ({
+        items: state.items.filter(item => item.id !== id),
+        loading: false
+      }));
+    } catch (error: any) {
+      set({ error: error.message, loading: false });
+    }
+  },
+
+  addSupplier: async (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => {
+    try {
+      if (isDemoMode()) {
+        // Simulate network delay
+        await new Promise(resolve => setTimeout(resolve, 300));
+
+        const newSupplier = {
+          ...supplier,
+          id: `supplier-${Date.now()}`,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        };
+
+        set(state => ({
+          suppliers: [...state.suppliers, newSupplier]
+        }));
+        return;
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('suppliers')
+        .insert(supplier)
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      set(state => ({
+        suppliers: [...state.suppliers, data]
+      }));
+    } catch (error: any) {
+      set({ error: error.message });
+    }
+  },
+}));

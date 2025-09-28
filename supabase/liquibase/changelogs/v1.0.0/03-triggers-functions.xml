@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Database Triggers and Functions for Restaurant Inventory Management v1.0.0 -->
+
+    <!-- Updated_at trigger function -->
+    <changeSet id="12" author="system" context="dev,staging,prod">
+        <comment>Create updated_at trigger function</comment>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION update_updated_at_column()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                NEW.updated_at = NOW();
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <rollback>
+            DROP FUNCTION IF EXISTS update_updated_at_column();
+        </rollback>
+    </changeSet>
+
+    <!-- Apply updated_at triggers to tables -->
+    <changeSet id="13" author="system" context="dev,staging,prod">
+        <comment>Create updated_at triggers for all tables</comment>
+        <sql>
+            CREATE TRIGGER update_restaurants_updated_at
+                BEFORE UPDATE ON restaurants
+                FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+            CREATE TRIGGER update_user_profiles_updated_at
+                BEFORE UPDATE ON user_profiles
+                FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+            CREATE TRIGGER update_suppliers_updated_at
+                BEFORE UPDATE ON suppliers
+                FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+            CREATE TRIGGER update_inventory_items_updated_at
+                BEFORE UPDATE ON inventory_items
+                FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS update_restaurants_updated_at ON restaurants;
+            DROP TRIGGER IF EXISTS update_user_profiles_updated_at ON user_profiles;
+            DROP TRIGGER IF EXISTS update_suppliers_updated_at ON suppliers;
+            DROP TRIGGER IF EXISTS update_inventory_items_updated_at ON inventory_items;
+        </rollback>
+    </changeSet>
+
+    <!-- Stock update function -->
+    <changeSet id="14" author="system" context="dev,staging,prod">
+        <comment>Create stock update function</comment>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION update_inventory_stock()
+            RETURNS TRIGGER AS $$
+            BEGIN
+                -- Update the current stock based on transaction type
+                IF NEW.type = 'in' THEN
+                    UPDATE inventory_items
+                    SET current_stock = current_stock + NEW.quantity
+                    WHERE id = NEW.item_id;
+                ELSIF NEW.type = 'out' THEN
+                    UPDATE inventory_items
+                    SET current_stock = GREATEST(current_stock - NEW.quantity, 0)
+                    WHERE id = NEW.item_id;
+                END IF;
+
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <rollback>
+            DROP FUNCTION IF EXISTS update_inventory_stock();
+        </rollback>
+    </changeSet>
+
+    <!-- Stock update trigger -->
+    <changeSet id="15" author="system" context="dev,staging,prod">
+        <comment>Create stock update trigger</comment>
+        <sql>
+            CREATE TRIGGER trigger_update_inventory_stock
+                AFTER INSERT ON stock_transactions
+                FOR EACH ROW EXECUTE FUNCTION update_inventory_stock();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS trigger_update_inventory_stock ON stock_transactions;
+        </rollback>
+    </changeSet>
+
+    <!-- Alert generation function -->
+    <changeSet id="16" author="system" context="dev,staging,prod">
+        <comment>Create alert generation function</comment>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION check_and_create_alerts()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                alert_type VARCHAR(20);
+                alert_message TEXT;
+                existing_alert_count INTEGER;
+            BEGIN
+                -- Determine alert type and message
+                IF NEW.current_stock = 0 THEN
+                    alert_type := 'out_of_stock';
+                    alert_message := NEW.name || ' is out of stock';
+                ELSIF NEW.current_stock &lt;= NEW.min_threshold THEN
+                    alert_type := 'low_stock';
+                    alert_message := NEW.name || ' is running low (Current: ' || NEW.current_stock || ' ' || NEW.unit || ', Minimum: ' || NEW.min_threshold || ' ' || NEW.unit || ')';
+                ELSE
+                    -- Stock is adequate, delete any existing alerts for this item
+                    DELETE FROM alerts
+                    WHERE item_id = NEW.id
+                    AND type IN ('low_stock', 'out_of_stock');
+                    RETURN NEW;
+                END IF;
+
+                -- Check if alert already exists for this item and type
+                SELECT COUNT(*) INTO existing_alert_count
+                FROM alerts
+                WHERE item_id = NEW.id
+                AND type = alert_type
+                AND is_read = false;
+
+                -- Only create new alert if one doesn't exist
+                IF existing_alert_count = 0 THEN
+                    INSERT INTO alerts (item_id, type, message, restaurant_id)
+                    VALUES (NEW.id, alert_type, alert_message, NEW.restaurant_id);
+                END IF;
+
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <rollback>
+            DROP FUNCTION IF EXISTS check_and_create_alerts();
+        </rollback>
+    </changeSet>
+
+    <!-- Alert generation trigger -->
+    <changeSet id="17" author="system" context="dev,staging,prod">
+        <comment>Create alert generation trigger</comment>
+        <sql>
+            CREATE TRIGGER trigger_check_alerts
+                AFTER UPDATE OF current_stock ON inventory_items
+                FOR EACH ROW EXECUTE FUNCTION check_and_create_alerts();
+
+            CREATE TRIGGER trigger_check_alerts_on_insert
+                AFTER INSERT ON inventory_items
+                FOR EACH ROW EXECUTE FUNCTION check_and_create_alerts();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS trigger_check_alerts ON inventory_items;
+            DROP TRIGGER IF EXISTS trigger_check_alerts_on_insert ON inventory_items;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

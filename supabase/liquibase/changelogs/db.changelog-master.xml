@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Master changelog for Restaurant Inventory Management -->
+
+    <!-- Include all versioned schema changes -->
+    <include file="changelogs/v1.0.0/01-initial-schema.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/02-rls-policies.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/03-triggers-functions.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/04-indexes.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/05-test-data.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/06-fix-foreign-keys.xml" relativeToChangelogFile="false"/>
+
+    <!-- Future versions will be added here -->
+    <!-- <include file="changelogs/v1.1.0/01-new-features.xml" relativeToChangelogFile="false"/> -->
+
+</databaseChangeLog>

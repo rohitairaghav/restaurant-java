@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Test Data for Restaurant Inventory Management v1.0.0 -->
+
+    <!-- Insert sample restaurants -->
+    <changeSet id="24" author="system" context="dev,staging">
+        <comment>Insert sample restaurants for testing</comment>
+        <sql>
+            INSERT INTO restaurants (id, name, address, phone, created_at, updated_at) VALUES
+            ('550e8400-e29b-41d4-a716-446655440000', 'Demo Italian Bistro', '123 Main Street, Downtown City, State 12345', '+1-555-0123', NOW(), NOW()),
+            ('550e8400-e29b-41d4-a716-446655440001', 'Test Pizza Palace', '456 Oak Avenue, Midtown City, State 12345', '+1-555-0456', NOW(), NOW()),
+            ('550e8400-e29b-41d4-a716-446655440002', 'Sample Sushi Bar', '789 Pine Road, Uptown City, State 12345', '+1-555-0789', NOW(), NOW());
+        </sql>
+        <rollback>
+            DELETE FROM restaurants WHERE id IN (
+                '550e8400-e29b-41d4-a716-446655440000',
+                '550e8400-e29b-41d4-a716-446655440001',
+                '550e8400-e29b-41d4-a716-446655440002'
+            );
+        </rollback>
+    </changeSet>
+
+    <!-- Insert sample user profiles -->
+    <!-- NOTE: This changeset is commented out because it requires actual auth.users entries
+         To enable: Create Supabase Auth users first, then uncomment this changeset -->
+    
+    <changeSet id="25" author="system" context="dev,staging">
+        <comment>Insert sample user profiles for testing authentication</comment>
+        <sql>
+            INSERT INTO user_profiles (id, email, role, restaurant_id, created_at, updated_at) VALUES
+            ('f8ab456c-a10d-41f7-a801-576d3473582b', 'manager@demobistro.com', 'manager', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('1522f9e5-85f3-4c45-a46e-68b3c8ec7ebd', 'staff@demobistro.com', 'staff', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('5667d95f-b23f-4b57-a871-b9d240a09a6c', 'chef@pizzapalace.com', 'manager', '550e8400-e29b-41d4-a716-446655440001', NOW(), NOW()),
+            ('486003c8-aaa3-47dc-9d0e-c700127391f7', 'server@sushi.com', 'staff', '550e8400-e29b-41d4-a716-446655440002', NOW(), NOW());
+        </sql>
+        <rollback>
+            DELETE FROM user_profiles WHERE id IN (
+                'f8ab456c-a10d-41f7-a801-576d3473582b',
+                '1522f9e5-85f3-4c45-a46e-68b3c8ec7ebd',
+                '5667d95f-b23f-4b57-a871-b9d240a09a6c',
+                '486003c8-aaa3-47dc-9d0e-c700127391f7'
+            );
+        </rollback>
+    </changeSet>
+    
+
+    <!-- Insert sample suppliers -->
+    <changeSet id="26" author="system" context="dev,staging">
+        <comment>Insert sample suppliers for testing</comment>
+        <sql>
+            INSERT INTO suppliers (id, name, contact_person, phone, email, address, restaurant_id, created_at, updated_at) VALUES
+            ('750e8400-e29b-41d4-a716-446655440000', 'Fresh Foods Wholesale', 'John Smith', '+1-555-1001', 'john@freshfoods.com', '100 Warehouse Blvd, Industrial District', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('750e8400-e29b-41d4-a716-446655440001', 'Premium Meat Co', 'Sarah Johnson', '+1-555-1002', 'sarah@premiummeat.com', '200 Butcher Lane, Meat District', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('750e8400-e29b-41d4-a716-446655440002', 'Dairy Fresh Suppliers', 'Mike Wilson', '+1-555-1003', 'mike@dairyfresh.com', '300 Milk Street, Dairy Village', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('750e8400-e29b-41d4-a716-446655440003', 'Ocean Fish Market', 'Lisa Chen', '+1-555-1004', 'lisa@oceanfish.com', '400 Harbor Way, Fishing District', '550e8400-e29b-41d4-a716-446655440002', NOW(), NOW());
+        </sql>
+        <rollback>
+            DELETE FROM suppliers WHERE id IN (
+                '750e8400-e29b-41d4-a716-446655440000',
+                '750e8400-e29b-41d4-a716-446655440001',
+                '750e8400-e29b-41d4-a716-446655440002',
+                '750e8400-e29b-41d4-a716-446655440003'
+            );
+        </rollback>
+    </changeSet>
+
+    <!-- Insert sample inventory items -->
+    <changeSet id="27" author="system" context="dev,staging">
+        <comment>Insert sample inventory items for testing</comment>
+        <sql>
+            INSERT INTO inventory_items (id, name, category, unit, cost_per_unit, current_stock, min_threshold, supplier_id, restaurant_id, created_at, updated_at) VALUES
+            -- Demo Italian Bistro items
+            ('850e8400-e29b-41d4-a716-446655440000', 'San Marzano Tomatoes', 'Vegetables', 'kg', 8.50, 25.00, 5.00, '750e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440001', 'Fresh Mozzarella', 'Dairy', 'kg', 12.00, 15.00, 3.00, '750e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440002', 'Prosciutto di Parma', 'Meat', 'kg', 45.00, 8.00, 2.00, '750e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440003', 'Extra Virgin Olive Oil', 'Condiments', 'liter', 15.00, 12.00, 3.00, '750e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440004', 'Basil Leaves', 'Herbs', 'bunch', 3.50, 20.00, 5.00, '750e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440005', 'Pasta Flour (00)', 'Dry Goods', 'kg', 6.00, 30.00, 10.00, '750e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            -- Low stock items for alert testing
+            ('850e8400-e29b-41d4-a716-446655440006', 'Parmesan Cheese', 'Dairy', 'kg', 28.00, 2.00, 5.00, '750e8400-e29b-41d4-a716-446655440002', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440007', 'Truffle Oil', 'Condiments', 'bottle', 35.00, 0.00, 2.00, '750e8400-e29b-41d4-a716-446655440000', '550e8400-e29b-41d4-a716-446655440000', NOW(), NOW()),
+            -- Sushi Bar items
+            ('850e8400-e29b-41d4-a716-446655440008', 'Sashimi Grade Tuna', 'Fish', 'kg', 55.00, 10.00, 3.00, '750e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440002', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440009', 'Sushi Rice', 'Dry Goods', 'kg', 4.50, 25.00, 8.00, '750e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440002', NOW(), NOW()),
+            ('850e8400-e29b-41d4-a716-446655440010', 'Nori Sheets', 'Dry Goods', 'pack', 8.00, 15.00, 5.00, '750e8400-e29b-41d4-a716-446655440003', '550e8400-e29b-41d4-a716-446655440002', NOW(), NOW());
+        </sql>
+        <rollback>
+            DELETE FROM inventory_items WHERE id IN (
+                '850e8400-e29b-41d4-a716-446655440000',
+                '850e8400-e29b-41d4-a716-446655440001',
+                '850e8400-e29b-41d4-a716-446655440002',
+                '850e8400-e29b-41d4-a716-446655440003',
+                '850e8400-e29b-41d4-a716-446655440004',
+                '850e8400-e29b-41d4-a716-446655440005',
+                '850e8400-e29b-41d4-a716-446655440006',
+                '850e8400-e29b-41d4-a716-446655440007',
+                '850e8400-e29b-41d4-a716-446655440008',
+                '850e8400-e29b-41d4-a716-446655440009',
+                '850e8400-e29b-41d4-a716-446655440010'
+            );
+        </rollback>
+    </changeSet>
+
+    <!-- Insert sample stock transactions -->
+    <!-- NOTE: This changeset is commented out because it requires actual auth.users entries
+         To enable: Create Supabase Auth users first, then uncomment this changeset -->
+    
+    <changeSet id="28" author="system" context="dev,staging">
+        <comment>Insert sample stock transactions for testing</comment>
+        <sql>
+            INSERT INTO stock_transactions (id, item_id, type, quantity, reason, notes, user_id, restaurant_id, created_at) VALUES
+            ('950e8400-e29b-41d4-a716-446655440000', '850e8400-e29b-41d4-a716-446655440000', 'in', 30.00, 'delivery', 'Weekly delivery from Fresh Foods', '1522f9e5-85f3-4c45-a46e-68b3c8ec7ebd', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '2 days'),
+            ('950e8400-e29b-41d4-a716-446655440001', '850e8400-e29b-41d4-a716-446655440001', 'in', 20.00, 'delivery', 'Fresh mozzarella delivery', '1522f9e5-85f3-4c45-a46e-68b3c8ec7ebd', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '2 days'),
+            ('950e8400-e29b-41d4-a716-446655440002', '850e8400-e29b-41d4-a716-446655440002', 'in', 10.00, 'delivery', 'Premium prosciutto order', '1522f9e5-85f3-4c45-a46e-68b3c8ec7ebd', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 day'),
+            ('950e8400-e29b-41d4-a716-446655440003', '850e8400-e29b-41d4-a716-446655440000', 'out', 5.00, 'usage', 'Used for marinara sauce prep', '5667d95f-b23f-4b57-a871-b9d240a09a6c', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '6 hours'),
+            ('950e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440001', 'out', 5.00, 'usage', 'Margherita pizza preparation', '5667d95f-b23f-4b57-a871-b9d240a09a6c', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '4 hours'),
+            ('950e8400-e29b-41d4-a716-446655440005', '850e8400-e29b-41d4-a716-446655440002', 'out', 2.00, 'usage', 'Antipasto platter', '5667d95f-b23f-4b57-a871-b9d240a09a6c', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '2 hours'),
+            ('950e8400-e29b-41d4-a716-446655440006', '850e8400-e29b-41d4-a716-446655440004', 'out', 5.00, 'waste', 'Basil leaves wilted - expired', '5667d95f-b23f-4b57-a871-b9d240a09a6c', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 day'),
+            ('950e8400-e29b-41d4-a716-446655440007', '850e8400-e29b-41d4-a716-446655440005', 'in', 50.00, 'delivery', 'Monthly flour delivery', '1522f9e5-85f3-4c45-a46e-68b3c8ec7ebd', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 week'),
+            ('950e8400-e29b-41d4-a716-446655440008', '850e8400-e29b-41d4-a716-446655440005', 'out', 20.00, 'usage', 'Fresh pasta production', '5667d95f-b23f-4b57-a871-b9d240a09a6c', '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '3 days'),
+            ('950e8400-e29b-41d4-a716-446655440009', '850e8400-e29b-41d4-a716-446655440008', 'in', 15.00, 'delivery', 'Fresh tuna delivery', '486003c8-aaa3-47dc-9d0e-c700127391f7', '550e8400-e29b-41d4-a716-446655440002', NOW() - INTERVAL '1 day'),
+            ('950e8400-e29b-41d4-a716-446655440010', '850e8400-e29b-41d4-a716-446655440008', 'out', 5.00, 'usage', 'Sashimi service', '486003c8-aaa3-47dc-9d0e-c700127391f7', '550e8400-e29b-41d4-a716-446655440002', NOW() - INTERVAL '3 hours');
+        </sql>
+        <rollback>
+            DELETE FROM stock_transactions WHERE id IN (
+                '950e8400-e29b-41d4-a716-446655440000',
+                '950e8400-e29b-41d4-a716-446655440001',
+                '950e8400-e29b-41d4-a716-446655440002',
+                '950e8400-e29b-41d4-a716-446655440003',
+                '950e8400-e29b-41d4-a716-446655440004',
+                '950e8400-e29b-41d4-a716-446655440005',
+                '950e8400-e29b-41d4-a716-446655440006',
+                '950e8400-e29b-41d4-a716-446655440007',
+                '950e8400-e29b-41d4-a716-446655440008',
+                '950e8400-e29b-41d4-a716-446655440009',
+                '950e8400-e29b-41d4-a716-446655440010'
+            );
+        </rollback>
+    </changeSet>
+    
+
+    <!-- Insert sample alerts -->
+    <changeSet id="29" author="system" context="dev,staging">
+        <comment>Insert sample alerts for testing (low stock and out of stock)</comment>
+        <sql>
+            INSERT INTO alerts (id, item_id, type, message, is_read, restaurant_id, created_at) VALUES
+            -- Out of stock alert
+            ('a50e8400-e29b-41d4-a716-446655440000', '850e8400-e29b-41d4-a716-446655440007', 'out_of_stock', 'Truffle Oil is out of stock', false, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '30 minutes'),
+            -- Low stock alerts
+            ('a50e8400-e29b-41d4-a716-446655440001', '850e8400-e29b-41d4-a716-446655440006', 'low_stock', 'Parmesan Cheese is running low (Current: 2 kg, Minimum: 5 kg)', false, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 hour'),
+            ('a50e8400-e29b-41d4-a716-446655440002', '850e8400-e29b-41d4-a716-446655440001', 'low_stock', 'Fresh Mozzarella is running low (Current: 15 kg, Minimum: 3 kg)', true, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '2 hours'),
+            -- Historical alerts for demonstration
+            ('a50e8400-e29b-41d4-a716-446655440003', '850e8400-e29b-41d4-a716-446655440004', 'low_stock', 'Basil Leaves is running low (Current: 20 bunch, Minimum: 5 bunch)', true, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 day'),
+            ('a50e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440008', 'low_stock', 'Sashimi Grade Tuna is running low (Current: 10 kg, Minimum: 3 kg)', false, '550e8400-e29b-41d4-a716-446655440002', NOW() - INTERVAL '45 minutes');
+        </sql>
+        <rollback>
+            DELETE FROM alerts WHERE id IN (
+                'a50e8400-e29b-41d4-a716-446655440000',
+                'a50e8400-e29b-41d4-a716-446655440001',
+                'a50e8400-e29b-41d4-a716-446655440002',
+                'a50e8400-e29b-41d4-a716-446655440003',
+                'a50e8400-e29b-41d4-a716-446655440004'
+            );
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

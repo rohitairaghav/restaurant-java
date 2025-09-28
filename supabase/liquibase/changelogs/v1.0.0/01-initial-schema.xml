@@ -1,0 +1,205 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Initial schema creation for Restaurant Inventory Management v1.0.0 -->
+
+    <!-- Enable UUID extension -->
+    <changeSet id="1" author="system" context="dev,staging,prod">
+        <comment>Enable UUID extension</comment>
+        <sql>CREATE EXTENSION IF NOT EXISTS "uuid-ossp";</sql>
+        <rollback>DROP EXTENSION IF EXISTS "uuid-ossp";</rollback>
+    </changeSet>
+
+    <!-- Create restaurants table -->
+    <changeSet id="2" author="system" context="dev,staging,prod">
+        <comment>Create restaurants table</comment>
+        <createTable tableName="restaurants">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="address" type="TEXT"/>
+            <column name="phone" type="VARCHAR(50)"/>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="restaurants"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create user_profiles table -->
+    <changeSet id="3" author="system" context="dev,staging,prod">
+        <comment>Create user_profiles table</comment>
+        <createTable tableName="user_profiles">
+            <column name="id" type="UUID">
+                <constraints primaryKey="true" nullable="false" foreignKeyName="fk_user_profiles_auth_users" references="auth.users(id)"/>
+            </column>
+            <column name="email" type="VARCHAR(255)">
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="role" type="VARCHAR(20)">
+                <constraints nullable="false" checkConstraint="role IN ('manager', 'staff')"/>
+            </column>
+            <column name="restaurant_id" type="UUID">
+                <constraints foreignKeyName="fk_user_profiles_restaurants" references="restaurants(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="user_profiles"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create suppliers table -->
+    <changeSet id="4" author="system" context="dev,staging,prod">
+        <comment>Create suppliers table</comment>
+        <createTable tableName="suppliers">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="contact_person" type="VARCHAR(255)"/>
+            <column name="phone" type="VARCHAR(50)"/>
+            <column name="email" type="VARCHAR(255)"/>
+            <column name="address" type="TEXT"/>
+            <column name="restaurant_id" type="UUID">
+                <constraints foreignKeyName="fk_suppliers_restaurants" references="restaurants(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="suppliers"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create inventory_items table -->
+    <changeSet id="5" author="system" context="dev,staging,prod">
+        <comment>Create inventory_items table</comment>
+        <createTable tableName="inventory_items">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="name" type="VARCHAR(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="category" type="VARCHAR(100)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="unit" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="cost_per_unit" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="current_stock" type="DECIMAL(10,2)" defaultValue="0"/>
+            <column name="min_threshold" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="supplier_id" type="UUID">
+                <constraints foreignKeyName="fk_inventory_items_suppliers" references="suppliers(id)"/>
+            </column>
+            <column name="restaurant_id" type="UUID">
+                <constraints foreignKeyName="fk_inventory_items_restaurants" references="restaurants(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="inventory_items"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create stock_transactions table -->
+    <changeSet id="6" author="system" context="dev,staging,prod">
+        <comment>Create stock_transactions table</comment>
+        <createTable tableName="stock_transactions">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="item_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_stock_transactions_items" references="inventory_items(id)"/>
+            </column>
+            <column name="type" type="VARCHAR(10)">
+                <constraints nullable="false" checkConstraint="type IN ('in', 'out')"/>
+            </column>
+            <column name="quantity" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="reason" type="VARCHAR(50)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="notes" type="TEXT"/>
+            <column name="user_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_stock_transactions_users" references="auth.users(id)"/>
+            </column>
+            <column name="restaurant_id" type="UUID">
+                <constraints foreignKeyName="fk_stock_transactions_restaurants" references="restaurants(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="stock_transactions"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create alerts table -->
+    <changeSet id="7" author="system" context="dev,staging,prod">
+        <comment>Create alerts table</comment>
+        <createTable tableName="alerts">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="item_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_alerts_items" references="inventory_items(id)"/>
+            </column>
+            <column name="type" type="VARCHAR(20)">
+                <constraints nullable="false" checkConstraint="type IN ('low_stock', 'out_of_stock')"/>
+            </column>
+            <column name="message" type="TEXT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_read" type="BOOLEAN" defaultValue="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="restaurant_id" type="UUID">
+                <constraints foreignKeyName="fk_alerts_restaurants" references="restaurants(id)"/>
+            </column>
+            <column name="created_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="alerts"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
