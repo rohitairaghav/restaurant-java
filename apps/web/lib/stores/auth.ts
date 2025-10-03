@@ -1,12 +1,14 @@
 import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { User } from '@restaurant-inventory/shared';
+import { defineAbilitiesFor, type AppAbility } from '@restaurant-inventory/shared';
 import { createClient } from '../supabase';
 import { isDemoMode } from '../demo-mode';
 import { DEMO_CREDENTIALS } from '../mock-data';
 
 interface AuthState {
   user: User | null;
+  ability: AppAbility;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, role: 'manager' | 'staff', restaurantId: string) => Promise<void>;
@@ -18,6 +20,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      ability: defineAbilitiesFor(null),
       loading: true,
 
       signIn: async (email: string, password: string) => {
@@ -28,7 +31,11 @@ export const useAuthStore = create<AuthState>()(
           );
 
           if (demoUser) {
-            set({ user: demoUser.user, loading: false });
+            set({
+              user: demoUser.user,
+              ability: defineAbilitiesFor(demoUser.user),
+              loading: false
+            });
             return;
           } else {
             throw new Error('Invalid demo credentials. Use manager@demo.com/demo123 or staff@demo.com/demo123');
@@ -54,7 +61,11 @@ export const useAuthStore = create<AuthState>()(
 
           if (profileError) throw profileError;
 
-          set({ user: profile, loading: false });
+          set({
+            user: profile,
+            ability: defineAbilitiesFor(profile),
+            loading: false
+          });
         }
       },
 
@@ -82,14 +93,22 @@ export const useAuthStore = create<AuthState>()(
 
           if (profileError) throw profileError;
 
-          set({ user: profile, loading: false });
+          set({
+            user: profile,
+            ability: defineAbilitiesFor(profile),
+            loading: false
+          });
         }
       },
 
       signOut: async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
-        set({ user: null, loading: false });
+        set({
+          user: null,
+          ability: defineAbilitiesFor(null),
+          loading: false
+        });
       },
 
       initialize: async () => {
@@ -111,12 +130,20 @@ export const useAuthStore = create<AuthState>()(
             .single();
 
           if (!error && profile) {
-            set({ user: profile, loading: false });
+            set({
+              user: profile,
+              ability: defineAbilitiesFor(profile),
+              loading: false
+            });
             return;
           }
         }
 
-        set({ user: null, loading: false });
+        set({
+          user: null,
+          ability: defineAbilitiesFor(null),
+          loading: false
+        });
       },
     }),
     {

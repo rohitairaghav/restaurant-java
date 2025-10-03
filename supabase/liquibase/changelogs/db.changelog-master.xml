@@ -21,6 +21,7 @@
     <include file="changelogs/v1.0.0/11-security-audit-logging.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/12-simplify-alert-messages.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/13-update-existing-alerts.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/12-user-management-policies.xml" relativeToChangelogFile="false"/>
 
     <!-- Future versions will be added here -->
     <!-- <include file="changelogs/v1.1.0/01-new-features.xml" relativeToChangelogFile="false"/> -->

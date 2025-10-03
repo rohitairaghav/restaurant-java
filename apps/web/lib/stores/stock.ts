@@ -1,9 +1,11 @@
 import { create } from 'zustand';
 import type { StockTransaction, StockTransactionInput, StockTransactionUpdate } from '@restaurant-inventory/shared';
+import { canUpdateFields, canUpdateTransaction, PERMISSION_ERRORS } from '@restaurant-inventory/shared';
 import { createClient } from '../supabase';
 import { syncManager } from '../offline/sync';
 import { isDemoMode } from '../demo-mode';
 import { mockStockTransactions, mockInventoryItems, mockUsers } from '../mock-data';
+import { useAuthStore } from './auth';
 
 interface StockState {
   transactions: StockTransaction[];
@@ -65,6 +67,17 @@ export const useStockStore = create<StockState>((set, get) => ({
   addTransaction: async (transaction: StockTransactionInput) => {
     set({ loading: true, error: null });
     try {
+      // Permission checks
+      const { user, ability } = useAuthStore.getState();
+
+      if (!user) {
+        throw new Error(PERMISSION_ERRORS.UNAUTHORIZED);
+      }
+
+      if (!ability.can('create', 'StockTransaction')) {
+        throw new Error(PERMISSION_ERRORS.FORBIDDEN);
+      }
+
       if (isDemoMode()) {
         // Demo mode: create mock transaction
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -134,6 +147,29 @@ export const useStockStore = create<StockState>((set, get) => ({
   updateTransaction: async (id: string, updates: StockTransactionUpdate) => {
     set({ loading: true, error: null });
     try {
+      // Permission checks
+      const { user, ability } = useAuthStore.getState();
+
+      if (!user) {
+        throw new Error(PERMISSION_ERRORS.UNAUTHORIZED);
+      }
+
+      if (!ability.can('update', 'StockTransaction')) {
+        throw new Error(PERMISSION_ERRORS.FORBIDDEN);
+      }
+
+      // Field-level permission check
+      const updateFields = Object.keys(updates);
+      if (!canUpdateFields(user, 'StockTransaction', updateFields)) {
+        throw new Error(PERMISSION_ERRORS.RESTRICTED_FIELDS);
+      }
+
+      // Get the transaction to check time-based permissions
+      const transaction = get().transactions.find(t => t.id === id);
+      if (transaction && !canUpdateTransaction(user, transaction.created_at)) {
+        throw new Error(PERMISSION_ERRORS.TRANSACTION_TOO_OLD);
+      }
+
       if (isDemoMode()) {
         // Demo mode: update mock transaction
         await new Promise(resolve => setTimeout(resolve, 500));

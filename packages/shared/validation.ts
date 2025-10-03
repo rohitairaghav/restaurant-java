@@ -5,6 +5,37 @@ import { z } from 'zod';
  * Using Zod for runtime type validation and security
  */
 
+// ==================== USER PROFILES ====================
+
+export const UserCreateSchema = z.object({
+  email: z.string()
+    .email('Invalid email address')
+    .min(1, 'Email is required')
+    .max(255, 'Email must be less than 255 characters')
+    .trim()
+    .toLowerCase(),
+  password: z.string()
+    .min(6, 'Password must be at least 6 characters')
+    .max(255, 'Password must be less than 255 characters'),
+  role: z.enum(['manager', 'staff'], {
+    errorMap: () => ({ message: 'Role must be either "manager" or "staff"' }),
+  }),
+  restaurant_id: z.string().uuid('Invalid restaurant ID'),
+});
+
+export const UserUpdateSchema = z.object({
+  email: z.string()
+    .email('Invalid email address')
+    .min(1, 'Email is required')
+    .max(255, 'Email must be less than 255 characters')
+    .trim()
+    .toLowerCase()
+    .optional(),
+  role: z.enum(['manager', 'staff'], {
+    errorMap: () => ({ message: 'Role must be either "manager" or "staff"' }),
+  }).optional(),
+});
+
 // ==================== INVENTORY ITEMS ====================
 
 export const InventoryItemCreateSchema = z.object({

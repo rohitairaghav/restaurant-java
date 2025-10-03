@@ -1,5 +1,6 @@
 import { renderHook, act } from '@testing-library/react';
 import { useAuthStore } from '@/lib/stores/auth';
+import { defineAbilitiesFor } from '@restaurant-inventory/shared';
 
 // Mock Supabase
 const mockSupabase = {
@@ -26,6 +27,7 @@ describe('Auth Store', () => {
     // Reset store state
     useAuthStore.setState({
       user: null,
+      ability: defineAbilitiesFor(null),
       loading: true,
     });
 
@@ -67,6 +69,7 @@ describe('Auth Store', () => {
       });
 
       expect(result.current.user).toEqual(mockUser);
+      expect(result.current.ability).toBeDefined();
       expect(result.current.loading).toBe(false);
     });
 
@@ -120,6 +123,7 @@ describe('Auth Store', () => {
       });
 
       expect(result.current.user).toEqual(mockUser);
+      expect(result.current.ability).toBeDefined();
       expect(result.current.loading).toBe(false);
     });
   });
@@ -181,6 +185,7 @@ describe('Auth Store', () => {
       });
 
       expect(result.current.user).toEqual(mockUser);
+      expect(result.current.ability).toBeDefined();
       expect(result.current.loading).toBe(false);
     });
 

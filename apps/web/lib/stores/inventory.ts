@@ -1,8 +1,10 @@
 import { create } from 'zustand';
 import type { InventoryItem, InventoryItemInput, Supplier } from '@restaurant-inventory/shared';
+import { canUpdateFields, canAccessRestaurant, PERMISSION_ERRORS } from '@restaurant-inventory/shared';
 import { createClient } from '../supabase';
 import { isDemoMode } from '../demo-mode';
 import { mockInventoryItems, mockSuppliers } from '../mock-data';
+import { useAuthStore } from './auth';
 
 interface InventoryState {
   items: InventoryItem[];
@@ -123,6 +125,23 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   updateItem: async (id: string, updates: Partial<InventoryItem>) => {
     set({ loading: true, error: null });
     try {
+      // Permission checks
+      const { user, ability } = useAuthStore.getState();
+
+      if (!user) {
+        throw new Error(PERMISSION_ERRORS.UNAUTHORIZED);
+      }
+
+      if (!ability.can('update', 'InventoryItem')) {
+        throw new Error(PERMISSION_ERRORS.FORBIDDEN);
+      }
+
+      // Field-level permission check
+      const updateFields = Object.keys(updates);
+      if (!canUpdateFields(user, 'InventoryItem', updateFields)) {
+        throw new Error(PERMISSION_ERRORS.RESTRICTED_FIELDS);
+      }
+
       if (isDemoMode()) {
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 500));
@@ -170,6 +189,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
   deleteItem: async (id: string) => {
     set({ loading: true, error: null });
     try {
+      // Permission checks
+      const { user, ability } = useAuthStore.getState();
+
+      if (!user) {
+        throw new Error(PERMISSION_ERRORS.UNAUTHORIZED);
+      }
+
+      if (!ability.can('delete', 'InventoryItem')) {
+        throw new Error(PERMISSION_ERRORS.MANAGER_ONLY);
+      }
+
       if (isDemoMode()) {
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 300));
@@ -264,6 +294,17 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
 
   addSupplier: async (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => {
     try {
+      // Permission checks
+      const { user, ability } = useAuthStore.getState();
+
+      if (!user) {
+        throw new Error(PERMISSION_ERRORS.UNAUTHORIZED);
+      }
+
+      if (!ability.can('create', 'Supplier')) {
+        throw new Error(PERMISSION_ERRORS.MANAGER_ONLY);
+      }
+
       if (isDemoMode()) {
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 300));

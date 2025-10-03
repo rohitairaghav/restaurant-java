@@ -35,6 +35,8 @@
     "typescript": "^5.0.0"
   },
   "dependencies": {
+    "@casl/ability": "^6.7.3",
+    "@casl/react": "^5.0.0",
     "@upstash/ratelimit": "^2.0.6",
     "@upstash/redis": "^1.35.4",
     "zod": "^3.25.76"
