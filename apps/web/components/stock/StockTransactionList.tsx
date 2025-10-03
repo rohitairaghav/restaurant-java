@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from 'react';
 import { useStockStore } from '@/lib/stores/stock';
-import { formatDateTime } from '@restaurant-inventory/shared';
-import { Plus, ArrowUp, ArrowDown } from 'lucide-react';
+import { formatDateTime, StockTransaction } from '@restaurant-inventory/shared';
+import { Plus, ArrowUp, ArrowDown, Pencil } from 'lucide-react';
 import StockForm from './StockForm';
 
 export default function StockTransactionList() {
   const { transactions, loading, error, fetchTransactions } = useStockStore();
   const [showForm, setShowForm] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<(StockTransaction & { inventory_items?: { name: string; unit: string }; user_profiles?: { email: string } }) | null>(null);
 
   useEffect(() => {
     fetchTransactions();
@@ -43,8 +44,14 @@ export default function StockTransactionList() {
         </button>
       </div>
 
-      {showForm && (
-        <StockForm onClose={() => setShowForm(false)} />
+      {(showForm || editingTransaction) && (
+        <StockForm
+          onClose={() => {
+            setShowForm(false);
+            setEditingTransaction(null);
+          }}
+          transaction={editingTransaction || undefined}
+        />
       )}
 
       {/* Mobile Card View */}
@@ -69,9 +76,18 @@ export default function StockTransactionList() {
                   {transaction.type === 'in' ? 'Stock In' : 'Stock Out'}
                 </span>
               </div>
-              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
-                {transaction.reason}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                  {transaction.reason}
+                </span>
+                <button
+                  onClick={() => setEditingTransaction(transaction as any)}
+                  className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                  aria-label="Edit transaction"
+                >
+                  <Pencil className="w-4 h-4 text-gray-600" />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -79,6 +95,11 @@ export default function StockTransactionList() {
                 <h3 className="font-semibold text-gray-900">
                   {(transaction as any).inventory_items?.name}
                 </h3>
+                {transaction.sku && (
+                  <p className="text-xs text-gray-500">
+                    SKU: {transaction.sku}
+                  </p>
+                )}
                 <p className="text-sm text-gray-600">
                   Quantity: {transaction.quantity} {(transaction as any).inventory_items?.unit}
                 </p>
@@ -103,6 +124,9 @@ export default function StockTransactionList() {
                   Item
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  SKU
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Type
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -117,6 +141,9 @@ export default function StockTransactionList() {
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Date
                 </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Actions
+                </th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
@@ -125,6 +152,11 @@ export default function StockTransactionList() {
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">
                       {(transaction as any).inventory_items?.name}
+                    </div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="text-xs text-gray-500">
+                      {transaction.sku || '-'}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -154,6 +186,15 @@ export default function StockTransactionList() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {formatDateTime(transaction.created_at)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    <button
+                      onClick={() => setEditingTransaction(transaction as any)}
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 text-sm text-primary-600 hover:text-primary-700 hover:bg-primary-50 rounded-lg transition-colors"
+                    >
+                      <Pencil className="w-4 h-4" />
+                      Edit
+                    </button>
                   </td>
                 </tr>
               ))}

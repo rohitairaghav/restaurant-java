@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Add updated_at field to stock_transactions table -->
+    <changeSet id="8" author="system" context="dev,staging,prod">
+        <comment>Add updated_at field to stock_transactions table for tracking modifications</comment>
+        <addColumn tableName="stock_transactions">
+            <column name="updated_at" type="TIMESTAMP WITH TIME ZONE" defaultValueComputed="NOW()">
+                <constraints nullable="false"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="stock_transactions" columnName="updated_at"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create trigger for updated_at on stock_transactions -->
+    <changeSet id="9" author="system" context="dev,staging,prod">
+        <comment>Create trigger to automatically update updated_at timestamp on stock_transactions</comment>
+        <sql>
+            CREATE TRIGGER update_stock_transactions_updated_at
+            BEFORE UPDATE ON stock_transactions
+            FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+        </sql>
+        <rollback>
+            DROP TRIGGER IF EXISTS update_stock_transactions_updated_at ON stock_transactions;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

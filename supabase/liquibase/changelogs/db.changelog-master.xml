@@ -14,6 +14,8 @@
     <include file="changelogs/v1.0.0/04-indexes.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/05-test-data.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/06-fix-foreign-keys.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/07-add-sku-field.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/08-add-updated-at-stock-transactions.xml" relativeToChangelogFile="false"/>
 
     <!-- Future versions will be added here -->
     <!-- <include file="changelogs/v1.1.0/01-new-features.xml" relativeToChangelogFile="false"/> -->

@@ -56,10 +56,12 @@ CREATE TABLE stock_transactions (
   type VARCHAR(10) NOT NULL CHECK (type IN ('in', 'out')),
   quantity DECIMAL(10,2) NOT NULL,
   reason VARCHAR(50) NOT NULL CHECK (reason IN ('purchase', 'delivery', 'sale', 'waste', 'transfer')),
+  sku VARCHAR(100),
   notes TEXT,
   user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Create alerts table
@@ -106,6 +108,10 @@ CREATE TRIGGER update_suppliers_updated_at
 
 CREATE TRIGGER update_inventory_items_updated_at
   BEFORE UPDATE ON inventory_items
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER update_stock_transactions_updated_at
+  BEFORE UPDATE ON stock_transactions
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Function to update current stock after transaction

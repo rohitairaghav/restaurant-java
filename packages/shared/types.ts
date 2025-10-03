@@ -48,10 +48,12 @@ export interface StockTransaction {
   type: 'in' | 'out';
   quantity: number;
   reason: 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer';
+  sku?: string;
   notes?: string;
   user_id: string;
   restaurant_id: string;
   created_at: string;
+  updated_at: string;
 }
 
 export interface Alert {
@@ -71,6 +73,7 @@ export interface AnalyticsData {
   low_stock_count: number;
 }
 
-export type StockTransactionInput = Omit<StockTransaction, 'id' | 'created_at'>;
+export type StockTransactionInput = Omit<StockTransaction, 'id' | 'created_at' | 'updated_at'>;
+export type StockTransactionUpdate = Partial<Omit<StockTransaction, 'id' | 'created_at' | 'updated_at' | 'restaurant_id' | 'user_id'>>;
 export type InventoryItemInput = Omit<InventoryItem, 'id' | 'current_stock' | 'created_at' | 'updated_at'>;
 export type SupplierInput = Omit<Supplier, 'id' | 'created_at' | 'updated_at'>;

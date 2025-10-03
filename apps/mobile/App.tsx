@@ -37,10 +37,12 @@ interface StockTransaction {
   type: 'in' | 'out';
   quantity: number;
   reason: 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer';
+  sku?: string;
   notes?: string;
   user_id: string;
   restaurant_id: string;
   created_at: string;
+  updated_at: string;
 }
 
 interface AppState {
@@ -50,7 +52,9 @@ interface AppState {
   showAddModal: boolean;
   showAddInventoryModal: boolean;
   showUpdateModal: boolean;
+  showEditTransactionModal: boolean;
   selectedItem: InventoryItem | null;
+  selectedTransaction: StockTransaction | null;
   loading: boolean;
   error: string | null;
   showLoginModal: boolean;
@@ -142,7 +146,9 @@ class App extends React.Component<AppProps, AppState> {
       showAddModal: false,
       showAddInventoryModal: false,
       showUpdateModal: false,
+      showEditTransactionModal: false,
       selectedItem: null,
+      selectedTransaction: null,
       loading: false,
       error: null,
       showLoginModal: false
@@ -192,31 +198,71 @@ class App extends React.Component<AppProps, AppState> {
     this.setState({ activeTab: tab });
   };
 
-  updateStock = async (itemId: string, quantity: number, type: 'in' | 'out', reason: 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer', notes?: string) => {
+  updateStock = async (itemId: string, quantity: number, type: 'in' | 'out', reason: 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer', notes?: string, sku?: string, transactionId?: string, oldQuantity?: number) => {
     this.setState({ loading: true, error: null });
     try {
-      // Create the stock transaction
-      const transactionData = {
-        item_id: itemId,
-        type,
-        quantity,
-        reason,
-        notes: notes || `Mobile ${type === 'in' ? 'stock in' : 'stock out'}`,
-        user_id: 'mobile-user',
-        restaurant_id: 'demo-restaurant'
-      };
+      if (transactionId && oldQuantity !== undefined) {
+        // Update existing transaction
+        const transactionData = {
+          item_id: itemId,
+          type,
+          quantity,
+          reason,
+          sku: sku || undefined,
+          notes: notes || undefined,
+        };
 
-      const { data: transactionResult, error: transactionError } = await supabase
-        .from('stock_transactions')
-        .insert(transactionData)
-        .select(`
-          *,
-          inventory_items(name, unit),
-          user_profiles(email)
-        `)
-        .single();
+        const { data: transactionResult, error: transactionError } = await supabase
+          .from('stock_transactions')
+          .update(transactionData)
+          .eq('id', transactionId)
+          .select(`
+            *,
+            inventory_items(name, unit),
+            user_profiles(email)
+          `)
+          .single();
 
-      if (transactionError) throw transactionError;
+        if (transactionError) throw transactionError;
+
+        // Adjust inventory based on quantity difference
+        const item = this.state.inventory.find(i => i.id === itemId);
+        if (item) {
+          const quantityDiff = quantity - oldQuantity;
+          const stockAdjustment = type === 'in' ? quantityDiff : -quantityDiff;
+          const newStock = item.current_stock + stockAdjustment;
+
+          const { error: updateError } = await supabase
+            .from('inventory_items')
+            .update({ current_stock: Math.max(0, newStock) })
+            .eq('id', itemId);
+
+          if (updateError) throw updateError;
+        }
+      } else {
+        // Create new stock transaction
+        const transactionData = {
+          item_id: itemId,
+          type,
+          quantity,
+          reason,
+          sku: sku || undefined,
+          notes: notes || `Mobile ${type === 'in' ? 'stock in' : 'stock out'}`,
+          user_id: 'mobile-user',
+          restaurant_id: 'demo-restaurant'
+        };
+
+        const { data: transactionResult, error: transactionError } = await supabase
+          .from('stock_transactions')
+          .insert(transactionData)
+          .select(`
+            *,
+            inventory_items(name, unit),
+            user_profiles(email)
+          `)
+          .single();
+
+        if (transactionError) throw transactionError;
 
       // Update the inventory item stock
       const item = this.state.inventory.find(i => i.id === itemId);
@@ -230,13 +276,18 @@ class App extends React.Component<AppProps, AppState> {
         if (updateError) throw updateError;
       }
 
+      }
+
       // Refresh the data
       await this.fetchInventoryItems();
       await this.fetchTransactions();
 
       this.setState({
         showUpdateModal: false,
+        showAddModal: false,
+        showEditTransactionModal: false,
         selectedItem: null,
+        selectedTransaction: null,
         loading: false
       });
     } catch (error: any) {
@@ -1060,10 +1111,11 @@ class App extends React.Component<AppProps, AppState> {
                     const type = formData.get('type') as 'in' | 'out';
                     const quantity = parseFloat(formData.get('quantity') as string);
                     const reason = formData.get('reason') as 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer';
+                    const sku = formData.get('sku') as string;
                     const notes = formData.get('notes') as string;
 
                     if (itemId && quantity > 0 && reason) {
-                      this.updateStock(itemId, quantity, type, reason, notes || undefined);
+                      this.updateStock(itemId, quantity, type, reason, notes || undefined, sku || undefined);
                     }
                   }}>
                     <div style={{marginBottom: '16px'}}>
@@ -1177,6 +1229,26 @@ class App extends React.Component<AppProps, AppState> {
 
                     <div style={{marginBottom: '16px'}}>
                       <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+                        SKU
+                      </label>
+                      <input
+                        type="text"
+                        name="sku"
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: '#ffffff',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{marginBottom: '16px'}}>
+                      <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
                         Notes
                       </label>
                       <textarea
@@ -1237,6 +1309,267 @@ class App extends React.Component<AppProps, AppState> {
               </div>
             )}
 
+            {/* Edit Transaction Modal */}
+            {this.state.showEditTransactionModal && this.state.selectedTransaction && (
+              <div style={{
+                position: 'fixed',
+                top: 0,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '16px',
+                zIndex: 1000
+              }}>
+                <div style={{
+                  backgroundColor: 'white',
+                  borderRadius: '12px',
+                  padding: '20px',
+                  margin: '8px',
+                  width: 'calc(100% - 16px)',
+                  maxWidth: '400px',
+                  maxHeight: '85vh',
+                  overflowY: 'auto',
+                  boxShadow: '0 10px 25px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <div style={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px'}}>
+                    <h3 style={{...cardTitleStyle, margin: '0'}}>Edit Stock Transaction</h3>
+                    <button
+                      style={{
+                        backgroundColor: '#f3f4f6',
+                        border: 'none',
+                        fontSize: '18px',
+                        cursor: 'pointer',
+                        padding: '12px',
+                        borderRadius: '8px',
+                        minHeight: '44px',
+                        minWidth: '44px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      onClick={() => this.setState({ showEditTransactionModal: false, selectedTransaction: null })}
+                    >
+                      ✕
+                    </button>
+                  </div>
+
+                  <form onSubmit={(e) => {
+                    e.preventDefault();
+                    const formData = new FormData(e.target as HTMLFormElement);
+                    const itemId = formData.get('item_id') as string;
+                    const type = formData.get('type') as 'in' | 'out';
+                    const quantity = parseFloat(formData.get('quantity') as string);
+                    const reason = formData.get('reason') as 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer';
+                    const sku = formData.get('sku') as string;
+                    const notes = formData.get('notes') as string;
+
+                    if (itemId && quantity > 0 && reason) {
+                      this.updateStock(
+                        itemId,
+                        quantity,
+                        type,
+                        reason,
+                        notes || undefined,
+                        sku || undefined,
+                        this.state.selectedTransaction?.id,
+                        this.state.selectedTransaction?.quantity
+                      );
+                    }
+                  }}>
+                    <div style={{marginBottom: '16px'}}>
+                      <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+                        Item *
+                      </label>
+                      <select
+                        name="item_id"
+                        required
+                        defaultValue={this.state.selectedTransaction.item_id}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        {inventory.map((item) => (
+                          <option key={item.id} value={item.id}>
+                            {item.name} (Current: {item.current_stock} {item.unit})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div style={{marginBottom: '16px'}}>
+                      <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+                        Type *
+                      </label>
+                      <select
+                        name="type"
+                        required
+                        defaultValue={this.state.selectedTransaction.type}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <option value="in">Stock In</option>
+                        <option value="out">Stock Out</option>
+                      </select>
+                    </div>
+
+                    <div style={{marginBottom: '16px'}}>
+                      <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+                        Reason *
+                      </label>
+                      <select
+                        name="reason"
+                        required
+                        defaultValue={this.state.selectedTransaction.reason}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: '#ffffff',
+                          outline: 'none'
+                        }}
+                      >
+                        <optgroup label="Stock In">
+                          <option value="purchase">Purchase</option>
+                          <option value="delivery">Delivery</option>
+                        </optgroup>
+                        <optgroup label="Stock Out">
+                          <option value="sale">Sale</option>
+                          <option value="waste">Waste</option>
+                          <option value="transfer">Transfer</option>
+                        </optgroup>
+                      </select>
+                    </div>
+
+                    <div style={{marginBottom: '16px'}}>
+                      <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+                        Quantity *
+                      </label>
+                      <input
+                        type="number"
+                        name="quantity"
+                        step="0.01"
+                        min="0.01"
+                        required
+                        defaultValue={this.state.selectedTransaction.quantity}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: '#ffffff',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{marginBottom: '16px'}}>
+                      <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+                        SKU
+                      </label>
+                      <input
+                        type="text"
+                        name="sku"
+                        defaultValue={this.state.selectedTransaction.sku || ''}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: '#ffffff',
+                          outline: 'none'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{marginBottom: '16px'}}>
+                      <label style={{...cardSubtitleStyle, fontWeight: '500', display: 'block', marginBottom: '4px'}}>
+                        Notes
+                      </label>
+                      <textarea
+                        name="notes"
+                        rows={3}
+                        defaultValue={this.state.selectedTransaction.notes || ''}
+                        style={{
+                          width: '100%',
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '80px',
+                          backgroundColor: '#ffffff',
+                          outline: 'none',
+                          resize: 'vertical'
+                        }}
+                      />
+                    </div>
+
+                    <div style={{display: 'flex', gap: '12px'}}>
+                      <button
+                        type="button"
+                        onClick={() => this.setState({ showEditTransactionModal: false, selectedTransaction: null })}
+                        style={{
+                          flex: 1,
+                          padding: '16px',
+                          border: '2px solid #d1d5db',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: 'white',
+                          cursor: 'pointer',
+                          fontWeight: '500'
+                        }}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        style={{
+                          flex: 1,
+                          padding: '16px',
+                          border: 'none',
+                          borderRadius: '8px',
+                          fontSize: '16px',
+                          minHeight: '48px',
+                          backgroundColor: '#2563eb',
+                          color: 'white',
+                          fontWeight: '600',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        Update Transaction
+                      </button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            )}
+
             {/* Transaction List */}
             <div style={{marginTop: '16px'}}>
               {transactions.map((transaction) => {
@@ -1266,22 +1599,47 @@ class App extends React.Component<AppProps, AppState> {
                           {isStockIn ? 'Stock In' : 'Stock Out'}
                         </span>
                       </div>
-                      <span style={{
-                        backgroundColor: '#f3f4f6',
-                        color: '#6b7280',
-                        padding: '2px 8px',
-                        borderRadius: '12px',
-                        fontSize: '12px',
-                        fontWeight: '500'
-                      }}>
-                        {transaction.reason}
-                      </span>
+                      <div style={{display: 'flex', gap: '8px', alignItems: 'center'}}>
+                        <span style={{
+                          backgroundColor: '#f3f4f6',
+                          color: '#6b7280',
+                          padding: '2px 8px',
+                          borderRadius: '12px',
+                          fontSize: '12px',
+                          fontWeight: '500'
+                        }}>
+                          {transaction.reason}
+                        </span>
+                        <button
+                          onClick={() => this.setState({
+                            showEditTransactionModal: true,
+                            selectedTransaction: transaction
+                          })}
+                          style={{
+                            backgroundColor: '#3b82f6',
+                            color: 'white',
+                            padding: '4px 8px',
+                            borderRadius: '6px',
+                            border: 'none',
+                            fontSize: '12px',
+                            cursor: 'pointer',
+                            fontWeight: '500'
+                          }}
+                        >
+                          ✏️ Edit
+                        </button>
+                      </div>
                     </div>
 
                     <div style={{marginBottom: '8px'}}>
                       <h4 style={{...cardTitleStyle, fontSize: '16px', margin: '0 0 4px 0'}}>
                         {item ? this.getCategoryEmoji(item.category) : '📦'} {item?.name || 'Unknown Item'}
                       </h4>
+                      {transaction.sku && (
+                        <p style={{...cardSubtitleStyle, fontSize: '11px', color: '#9ca3af', margin: '0 0 2px 0'}}>
+                          SKU: {transaction.sku}
+                        </p>
+                      )}
                       <p style={{...cardSubtitleStyle, margin: '0'}}>
                         Quantity: {transaction.quantity} {item?.unit || 'units'}
                       </p>

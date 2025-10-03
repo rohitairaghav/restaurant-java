@@ -16,7 +16,13 @@
     "test:coverage": "npm run test:coverage --workspaces",
     "test:watch": "npm run test:watch --workspaces",
     "lint": "eslint . --ext .ts,.tsx,.js,.jsx",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "db:setup": "cd supabase/liquibase && liquibase --version && echo 'Liquibase setup validated'",
+    "db:status": "cd supabase/liquibase && liquibase status --changelog-file=changelogs/db.changelog-master.xml",
+    "db:update": "cd supabase/liquibase && liquibase update --changelog-file=changelogs/db.changelog-master.xml",
+    "db:rollback": "cd supabase/liquibase && liquibase rollback-count 1 --changelog-file=changelogs/db.changelog-master.xml",
+    "db:validate": "cd supabase/liquibase && liquibase validate --changelog-file=changelogs/db.changelog-master.xml",
+    "db:history": "cd supabase/liquibase && liquibase history --changelog-file=changelogs/db.changelog-master.xml"
   },
   "devDependencies": {
     "@types/jest": "^29.5.0",

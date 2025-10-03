@@ -4,24 +4,27 @@ import { useState, useEffect } from 'react';
 import { useStockStore } from '@/lib/stores/stock';
 import { useInventoryStore } from '@/lib/stores/inventory';
 import { useAuthStore } from '@/lib/stores/auth';
-import { TRANSACTION_REASONS } from '@restaurant-inventory/shared';
+import { TRANSACTION_REASONS, StockTransaction } from '@restaurant-inventory/shared';
 import { X } from 'lucide-react';
 
 interface StockFormProps {
   onClose: () => void;
+  transaction?: StockTransaction & { inventory_items?: { name: string; unit: string } };
 }
 
-export default function StockForm({ onClose }: StockFormProps) {
-  const { addTransaction } = useStockStore();
+export default function StockForm({ onClose, transaction }: StockFormProps) {
+  const { addTransaction, updateTransaction } = useStockStore();
   const { items, fetchItems } = useInventoryStore();
   const { user } = useAuthStore();
+  const isEditMode = !!transaction;
 
   const [formData, setFormData] = useState({
-    item_id: '',
-    type: 'in' as 'in' | 'out',
-    quantity: '',
-    reason: '',
-    notes: '',
+    item_id: transaction?.item_id || '',
+    type: (transaction?.type || 'in') as 'in' | 'out',
+    quantity: transaction?.quantity?.toString() || '',
+    reason: transaction?.reason || '',
+    sku: transaction?.sku || '',
+    notes: transaction?.notes || '',
   });
 
   const [loading, setLoading] = useState(false);
@@ -30,6 +33,9 @@ export default function StockForm({ onClose }: StockFormProps) {
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  // Store the original quantity for stock adjustment
+  const originalQuantity = transaction?.quantity || 0;
 
   const availableReasons = formData.type === 'in'
     ? TRANSACTION_REASONS.in
@@ -41,19 +47,37 @@ export default function StockForm({ onClose }: StockFormProps) {
     setLoading(true);
 
     try {
-      await addTransaction({
-        item_id: formData.item_id,
-        type: formData.type,
-        quantity: parseFloat(formData.quantity),
-        reason: formData.reason as any,
-        notes: formData.notes || undefined,
-        user_id: user!.id,
-        restaurant_id: user!.restaurant_id,
-      });
+      if (isEditMode && transaction) {
+        // Update existing transaction
+        await updateTransaction(
+          transaction.id,
+          {
+            item_id: formData.item_id,
+            type: formData.type,
+            quantity: parseFloat(formData.quantity),
+            reason: formData.reason as any,
+            sku: formData.sku || undefined,
+            notes: formData.notes || undefined,
+          },
+          originalQuantity
+        );
+      } else {
+        // Add new transaction
+        await addTransaction({
+          item_id: formData.item_id,
+          type: formData.type,
+          quantity: parseFloat(formData.quantity),
+          reason: formData.reason as any,
+          sku: formData.sku || undefined,
+          notes: formData.notes || undefined,
+          user_id: user!.id,
+          restaurant_id: user!.restaurant_id,
+        });
+      }
 
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Failed to add transaction');
+      setError(err.message || `Failed to ${isEditMode ? 'update' : 'add'} transaction`);
     } finally {
       setLoading(false);
     }
@@ -74,7 +98,9 @@ export default function StockForm({ onClose }: StockFormProps) {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-y-auto p-4 sm:p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg sm:text-xl font-bold">Add Stock Transaction</h2>
+          <h2 className="text-lg sm:text-xl font-bold">
+            {isEditMode ? 'Edit' : 'Add'} Stock Transaction
+          </h2>
           <button
             onClick={onClose}
             className="p-2 hover:bg-gray-100 rounded-lg touch-manipulation"
@@ -158,6 +184,20 @@ export default function StockForm({ onClose }: StockFormProps) {
 
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
+              SKU
+            </label>
+            <input
+              type="text"
+              name="sku"
+              value={formData.sku}
+              onChange={handleChange}
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation"
+              placeholder="Enter SKU (optional)"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
               Notes
             </label>
             <textarea
@@ -186,7 +226,9 @@ export default function StockForm({ onClose }: StockFormProps) {
               disabled={loading}
               className="flex-1 bg-primary-600 text-white py-3 px-4 rounded-lg text-base font-medium hover:bg-primary-700 disabled:opacity-50 touch-manipulation"
             >
-              {loading ? 'Adding...' : 'Add Transaction'}
+              {loading
+                ? (isEditMode ? 'Updating...' : 'Adding...')
+                : (isEditMode ? 'Update Transaction' : 'Add Transaction')}
             </button>
           </div>
         </form>
