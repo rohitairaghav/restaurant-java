@@ -17,6 +17,8 @@ interface InventoryState {
   updateItem: (id: string, updates: Partial<InventoryItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   addSupplier: (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
+  checkItemHasTransactions: (id: string) => Promise<boolean>;
+  checkItemHasAlerts: (id: string) => Promise<boolean>;
 }
 
 export const useInventoryStore = create<InventoryState>((set, get) => ({
@@ -179,6 +181,18 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         return;
       }
 
+      // Check if item has stock transactions or alerts before deletion
+      const hasTransactions = await get().checkItemHasTransactions(id);
+      const hasAlerts = await get().checkItemHasAlerts(id);
+      
+      if (hasTransactions && hasAlerts) {
+        throw new Error('Cannot delete inventory item that has stock transactions and alerts. Please delete all related stock transactions and alerts first.');
+      } else if (hasTransactions) {
+        throw new Error('Cannot delete inventory item that has stock transactions. Please delete all related stock transactions first.');
+      } else if (hasAlerts) {
+        throw new Error('Cannot delete inventory item that has alerts. Please delete all related alerts first.');
+      }
+
       const supabase = createClient();
       const { error } = await supabase
         .from('inventory_items')
@@ -193,6 +207,58 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       }));
     } catch (error: any) {
       set({ error: error.message, loading: false });
+    }
+  },
+
+  checkItemHasTransactions: async (id: string) => {
+    try {
+      if (isDemoMode()) {
+        // In demo mode, simulate some items having transactions
+        const mockTransactions = [
+          { item_id: '1' },
+          { item_id: '2' }
+        ];
+        return mockTransactions.some(t => t.item_id === id);
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('stock_transactions')
+        .select('id')
+        .eq('item_id', id)
+        .limit(1);
+
+      if (error) throw error;
+      return data && data.length > 0;
+    } catch (error: any) {
+      console.error('Error checking transactions:', error);
+      return false;
+    }
+  },
+
+  checkItemHasAlerts: async (id: string) => {
+    try {
+      if (isDemoMode()) {
+        // In demo mode, simulate some items having alerts
+        const mockAlerts = [
+          { item_id: '1' },
+          { item_id: '3' }
+        ];
+        return mockAlerts.some(a => a.item_id === id);
+      }
+
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('alerts')
+        .select('id')
+        .eq('item_id', id)
+        .limit(1);
+
+      if (error) throw error;
+      return data && data.length > 0;
+    } catch (error: any) {
+      console.error('Error checking alerts:', error);
+      return false;
     }
   },
 

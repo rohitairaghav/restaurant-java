@@ -8,14 +8,45 @@ import { Edit, Trash2, Plus, AlertTriangle } from 'lucide-react';
 import InventoryForm from './InventoryForm';
 
 export default function InventoryList() {
-  const { items, loading, error, fetchItems, deleteItem } = useInventoryStore();
+  const { items, loading, error, fetchItems, deleteItem, checkItemHasTransactions, checkItemHasAlerts } = useInventoryStore();
   const { user } = useAuthStore();
   const [showForm, setShowForm] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [itemsWithTransactions, setItemsWithTransactions] = useState<Set<string>>(new Set());
+  const [itemsWithAlerts, setItemsWithAlerts] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     fetchItems();
   }, [fetchItems]);
+
+  // Check which items have transactions and alerts
+  useEffect(() => {
+    const checkDependencies = async () => {
+      const itemsWithTxns = new Set<string>();
+      const itemsWithAlertsSet = new Set<string>();
+      
+      for (const item of items) {
+        const [hasTransactions, hasAlerts] = await Promise.all([
+          checkItemHasTransactions(item.id),
+          checkItemHasAlerts(item.id)
+        ]);
+        
+        if (hasTransactions) {
+          itemsWithTxns.add(item.id);
+        }
+        if (hasAlerts) {
+          itemsWithAlertsSet.add(item.id);
+        }
+      }
+      
+      setItemsWithTransactions(itemsWithTxns);
+      setItemsWithAlerts(itemsWithAlertsSet);
+    };
+
+    if (items.length > 0) {
+      checkDependencies();
+    }
+  }, [items, checkItemHasTransactions, checkItemHasAlerts]);
 
   const handleEdit = (item: any) => {
     setEditingItem(item);
@@ -23,7 +54,25 @@ export default function InventoryList() {
   };
 
   const handleDelete = async (id: string) => {
-    if (window.confirm('Are you sure you want to delete this item?')) {
+    const item = items.find(i => i.id === id);
+    const itemName = item?.name || 'this item';
+    
+    // Check if item has transactions or alerts
+    const hasTransactions = itemsWithTransactions.has(id);
+    const hasAlerts = itemsWithAlerts.has(id);
+    
+    if (hasTransactions && hasAlerts) {
+      alert(`Cannot delete "${itemName}" because it has stock transactions and alerts. Please delete all related stock transactions and alerts first.`);
+      return;
+    } else if (hasTransactions) {
+      alert(`Cannot delete "${itemName}" because it has stock transactions. Please delete all related stock transactions first from the Stock Management page.`);
+      return;
+    } else if (hasAlerts) {
+      alert(`Cannot delete "${itemName}" because it has alerts. Please delete all related alerts first from the Alerts page.`);
+      return;
+    }
+    
+    if (window.confirm(`Are you sure you want to delete "${itemName}"? This action cannot be undone.`)) {
       await deleteItem(id);
     }
   };
@@ -44,7 +93,28 @@ export default function InventoryList() {
   if (error) {
     return (
       <div className="bg-danger-50 border border-danger-200 rounded-md p-4">
-        <p className="text-danger-600">{error}</p>
+        <div className="flex items-start">
+          <AlertTriangle className="h-5 w-5 text-danger-600 mt-0.5 mr-3 flex-shrink-0" />
+          <div>
+            <h3 className="text-sm font-medium text-danger-800">Error</h3>
+            <p className="text-danger-600 mt-1">{error}</p>
+            {error.includes('stock transactions') && error.includes('alerts') && (
+              <p className="text-danger-600 mt-2 text-sm">
+                To delete this item, you must first delete all related stock transactions from the Stock Management page and all related alerts from the Alerts page.
+              </p>
+            )}
+            {error.includes('stock transactions') && !error.includes('alerts') && (
+              <p className="text-danger-600 mt-2 text-sm">
+                To delete this item, you must first delete all related stock transactions from the Stock Management page.
+              </p>
+            )}
+            {error.includes('alerts') && !error.includes('stock transactions') && (
+              <p className="text-danger-600 mt-2 text-sm">
+                To delete this item, you must first delete all related alerts from the Alerts page.
+              </p>
+            )}
+          </div>
+        </div>
       </div>
     );
   }
@@ -133,7 +203,21 @@ export default function InventoryList() {
                   </button>
                   <button
                     onClick={() => handleDelete(item.id)}
-                    className="flex-1 sm:flex-none p-3 sm:p-2 text-danger-600 hover:bg-danger-50 rounded-lg border border-danger-200 sm:border-0 transition-colors"
+                    disabled={itemsWithTransactions.has(item.id) || itemsWithAlerts.has(item.id)}
+                    title={
+                      itemsWithTransactions.has(item.id) && itemsWithAlerts.has(item.id)
+                        ? 'Cannot delete: Item has stock transactions and alerts'
+                        : itemsWithTransactions.has(item.id)
+                        ? 'Cannot delete: Item has stock transactions'
+                        : itemsWithAlerts.has(item.id)
+                        ? 'Cannot delete: Item has alerts'
+                        : 'Delete item'
+                    }
+                    className={`flex-1 sm:flex-none p-3 sm:p-2 rounded-lg border sm:border-0 transition-colors ${
+                      itemsWithTransactions.has(item.id) || itemsWithAlerts.has(item.id)
+                        ? 'text-gray-400 cursor-not-allowed bg-gray-50 border-gray-200'
+                        : 'text-danger-600 hover:bg-danger-50 border-danger-200'
+                    }`}
                   >
                     <Trash2 size={18} className="mx-auto" />
                   </button>

@@ -16,6 +16,11 @@
     <include file="changelogs/v1.0.0/06-fix-foreign-keys.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/07-add-sku-field.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/08-add-updated-at-stock-transactions.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/09-security-fixes.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/10-update-security-function.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/11-security-audit-logging.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/12-simplify-alert-messages.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/13-update-existing-alerts.xml" relativeToChangelogFile="false"/>
 
     <!-- Future versions will be added here -->
     <!-- <include file="changelogs/v1.1.0/01-new-features.xml" relativeToChangelogFile="false"/> -->

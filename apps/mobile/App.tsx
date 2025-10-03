@@ -198,46 +198,34 @@ class App extends React.Component<AppProps, AppState> {
     this.setState({ activeTab: tab });
   };
 
-  updateStock = async (itemId: string, quantity: number, type: 'in' | 'out', reason: 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer', notes?: string, sku?: string, transactionId?: string, oldQuantity?: number) => {
+  updateStock = async (itemId: string, quantity: number, type: 'in' | 'out', reason: 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer', notes?: string, sku?: string, transactionId?: string) => {
     this.setState({ loading: true, error: null });
     try {
-      if (transactionId && oldQuantity !== undefined) {
-        // Update existing transaction
-        const transactionData = {
-          item_id: itemId,
-          type,
-          quantity,
-          reason,
-          sku: sku || undefined,
-          notes: notes || undefined,
-        };
+      // Validate inputs
+      if (quantity <= 0) {
+        throw new Error('Quantity must be greater than 0');
+      }
 
-        const { data: transactionResult, error: transactionError } = await supabase
-          .from('stock_transactions')
-          .update(transactionData)
-          .eq('id', transactionId)
-          .select(`
-            *,
-            inventory_items(name, unit),
-            user_profiles(email)
-          `)
-          .single();
+      if (transactionId) {
+        // Update existing transaction using secure database function
+        const { data, error } = await supabase.rpc('update_stock_transaction', {
+          transaction_uuid: transactionId,
+          new_item_id: itemId,
+          new_type: type,
+          new_quantity: quantity,
+          new_reason: reason,
+          new_sku: sku || null,
+          new_notes: notes || null,
+        });
 
-        if (transactionError) throw transactionError;
+        if (error) throw error;
 
-        // Adjust inventory based on quantity difference
-        const item = this.state.inventory.find(i => i.id === itemId);
-        if (item) {
-          const quantityDiff = quantity - oldQuantity;
-          const stockAdjustment = type === 'in' ? quantityDiff : -quantityDiff;
-          const newStock = item.current_stock + stockAdjustment;
-
-          const { error: updateError } = await supabase
-            .from('inventory_items')
-            .update({ current_stock: Math.max(0, newStock) })
-            .eq('id', itemId);
-
-          if (updateError) throw updateError;
+        // Check the response from the function
+        if (data && data.length > 0) {
+          const result = data[0];
+          if (!result.success) {
+            throw new Error(result.message);
+          }
         }
       } else {
         // Create new stock transaction
@@ -1375,8 +1363,7 @@ class App extends React.Component<AppProps, AppState> {
                         reason,
                         notes || undefined,
                         sku || undefined,
-                        this.state.selectedTransaction?.id,
-                        this.state.selectedTransaction?.quantity
+                        this.state.selectedTransaction?.id
                       );
                     }
                   }}>

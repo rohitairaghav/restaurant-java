@@ -1,0 +1,172 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- Simplify low stock alert messages -->
+    <changeSet id="12-1" author="system" context="dev,staging,prod">
+        <comment>Simplify low stock alert messages by removing redundant bracket information</comment>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION check_low_stock_alert(item_uuid UUID)
+            RETURNS VOID AS $$
+            DECLARE
+              item_record inventory_items%ROWTYPE;
+              alert_exists BOOLEAN;
+            BEGIN
+              SELECT * INTO item_record FROM inventory_items WHERE id = item_uuid;
+
+              IF item_record.current_stock &lt;= item_record.min_threshold THEN
+                -- Check if alert already exists
+                SELECT EXISTS(
+                  SELECT 1 FROM alerts
+                  WHERE item_id = item_uuid
+                  AND type = 'low_stock'
+                  AND is_read = FALSE
+                ) INTO alert_exists;
+
+                IF NOT alert_exists THEN
+                  INSERT INTO alerts (item_id, type, message, restaurant_id)
+                  VALUES (
+                    item_uuid,
+                    CASE WHEN item_record.current_stock &lt;= 0 THEN 'out_of_stock' ELSE 'low_stock' END,
+                    CASE
+                      WHEN item_record.current_stock &lt;= 0 THEN
+                        item_record.name || ' is out of stock'
+                      ELSE
+                        item_record.name || ' is running low'
+                    END,
+                    item_record.restaurant_id
+                  );
+                END IF;
+              END IF;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <rollback>
+            -- Revert to previous version with bracket information
+            CREATE OR REPLACE FUNCTION check_low_stock_alert(item_uuid UUID)
+            RETURNS VOID AS $$
+            DECLARE
+              item_record inventory_items%ROWTYPE;
+              alert_exists BOOLEAN;
+            BEGIN
+              SELECT * INTO item_record FROM inventory_items WHERE id = item_uuid;
+
+              IF item_record.current_stock &lt;= item_record.min_threshold THEN
+                -- Check if alert already exists
+                SELECT EXISTS(
+                  SELECT 1 FROM alerts
+                  WHERE item_id = item_uuid
+                  AND type = 'low_stock'
+                  AND is_read = FALSE
+                ) INTO alert_exists;
+
+                IF NOT alert_exists THEN
+                  INSERT INTO alerts (item_id, type, message, restaurant_id)
+                  VALUES (
+                    item_uuid,
+                    CASE WHEN item_record.current_stock &lt;= 0 THEN 'out_of_stock' ELSE 'low_stock' END,
+                    CASE
+                      WHEN item_record.current_stock &lt;= 0 THEN
+                        item_record.name || ' is out of stock'
+                      ELSE
+                        item_record.name || ' is running low (Current: ' || item_record.current_stock || ' ' || item_record.unit || ', Minimum: ' || item_record.min_threshold || ' ' || item_record.unit || ')'
+                    END,
+                    item_record.restaurant_id
+                  );
+                END IF;
+              END IF;
+            END;
+            $$ LANGUAGE plpgsql;
+        </rollback>
+    </changeSet>
+
+    <!-- Update the alert generation function -->
+    <changeSet id="12-2" author="system" context="dev,staging,prod">
+        <comment>Update alert generation function to use simplified messages</comment>
+        <createProcedure>
+            CREATE OR REPLACE FUNCTION check_and_create_alerts()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                alert_type VARCHAR(20);
+                alert_message TEXT;
+                existing_alert_count INTEGER;
+            BEGIN
+                -- Determine alert type and message
+                IF NEW.current_stock = 0 THEN
+                    alert_type := 'out_of_stock';
+                    alert_message := NEW.name || ' is out of stock';
+                ELSIF NEW.current_stock &lt;= NEW.min_threshold THEN
+                    alert_type := 'low_stock';
+                    alert_message := NEW.name || ' is running low';
+                ELSE
+                    -- Stock is adequate, delete any existing alerts for this item
+                    DELETE FROM alerts
+                    WHERE item_id = NEW.id
+                    AND type IN ('low_stock', 'out_of_stock');
+                    RETURN NEW;
+                END IF;
+
+                -- Check if alert already exists for this item and type
+                SELECT COUNT(*) INTO existing_alert_count
+                FROM alerts
+                WHERE item_id = NEW.id
+                AND type = alert_type
+                AND is_read = false;
+
+                -- Only create new alert if one doesn't exist
+                IF existing_alert_count = 0 THEN
+                    INSERT INTO alerts (item_id, type, message, restaurant_id)
+                    VALUES (NEW.id, alert_type, alert_message, NEW.restaurant_id);
+                END IF;
+
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </createProcedure>
+        <rollback>
+            -- Revert to previous version with bracket information
+            CREATE OR REPLACE FUNCTION check_and_create_alerts()
+            RETURNS TRIGGER AS $$
+            DECLARE
+                alert_type VARCHAR(20);
+                alert_message TEXT;
+                existing_alert_count INTEGER;
+            BEGIN
+                -- Determine alert type and message
+                IF NEW.current_stock = 0 THEN
+                    alert_type := 'out_of_stock';
+                    alert_message := NEW.name || ' is out of stock';
+                ELSIF NEW.current_stock &lt;= NEW.min_threshold THEN
+                    alert_type := 'low_stock';
+                    alert_message := NEW.name || ' is running low (Current: ' || NEW.current_stock || ' ' || NEW.unit || ', Minimum: ' || NEW.min_threshold || ' ' || NEW.unit || ')';
+                ELSE
+                    -- Stock is adequate, delete any existing alerts for this item
+                    DELETE FROM alerts
+                    WHERE item_id = NEW.id
+                    AND type IN ('low_stock', 'out_of_stock');
+                    RETURN NEW;
+                END IF;
+
+                -- Check if alert already exists for this item and type
+                SELECT COUNT(*) INTO existing_alert_count
+                FROM alerts
+                WHERE item_id = NEW.id
+                AND type = alert_type
+                AND is_read = false;
+
+                -- Only create new alert if one doesn't exist
+                IF existing_alert_count = 0 THEN
+                    INSERT INTO alerts (item_id, type, message, restaurant_id)
+                    VALUES (NEW.id, alert_type, alert_message, NEW.restaurant_id);
+                END IF;
+
+                RETURN NEW;
+            END;
+            $$ LANGUAGE plpgsql;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

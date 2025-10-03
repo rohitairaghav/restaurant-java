@@ -1,0 +1,343 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+    http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.20.xsd">
+
+  <!-- Create security audit log table -->
+  <changeSet id="13" author="system" context="dev,staging,prod">
+    <comment>Create security audit log table for tracking sensitive operations</comment>
+
+    <createTable tableName="security_audit_log">
+      <column name="id" type="uuid" defaultValueComputed="uuid_generate_v4()">
+        <constraints primaryKey="true" nullable="false"/>
+      </column>
+      <column name="user_id" type="uuid">
+        <constraints nullable="true" foreignKeyName="fk_audit_user" references="auth.users(id)"/>
+      </column>
+      <column name="restaurant_id" type="uuid">
+        <constraints nullable="true" foreignKeyName="fk_audit_restaurant" references="restaurants(id)" deleteCascade="true"/>
+      </column>
+      <column name="action" type="varchar(100)">
+        <constraints nullable="false"/>
+      </column>
+      <column name="resource_type" type="varchar(50)">
+        <constraints nullable="true"/>
+      </column>
+      <column name="resource_id" type="uuid">
+        <constraints nullable="true"/>
+      </column>
+      <column name="ip_address" type="inet">
+        <constraints nullable="true"/>
+      </column>
+      <column name="user_agent" type="text">
+        <constraints nullable="true"/>
+      </column>
+      <column name="metadata" type="jsonb">
+        <constraints nullable="true"/>
+      </column>
+      <column name="status" type="varchar(20)" defaultValue="success">
+        <constraints nullable="false"/>
+      </column>
+      <column name="error_message" type="text">
+        <constraints nullable="true"/>
+      </column>
+      <column name="created_at" type="timestamp with time zone" defaultValueComputed="NOW()">
+        <constraints nullable="false"/>
+      </column>
+    </createTable>
+
+    <createIndex indexName="idx_audit_user_id" tableName="security_audit_log">
+      <column name="user_id"/>
+    </createIndex>
+
+    <createIndex indexName="idx_audit_restaurant_id" tableName="security_audit_log">
+      <column name="restaurant_id"/>
+    </createIndex>
+
+    <createIndex indexName="idx_audit_created_at" tableName="security_audit_log">
+      <column name="created_at"/>
+    </createIndex>
+
+    <createIndex indexName="idx_audit_action" tableName="security_audit_log">
+      <column name="action"/>
+    </createIndex>
+  </changeSet>
+
+  <!-- Create function to log security events -->
+  <changeSet id="14" author="system" context="dev,staging,prod">
+    <comment>Create function to log security audit events</comment>
+
+    <createProcedure dbms="postgresql">
+      <![CDATA[
+        CREATE OR REPLACE FUNCTION log_security_audit(
+          p_action VARCHAR,
+          p_resource_type VARCHAR DEFAULT NULL,
+          p_resource_id UUID DEFAULT NULL,
+          p_ip_address INET DEFAULT NULL,
+          p_user_agent TEXT DEFAULT NULL,
+          p_metadata JSONB DEFAULT NULL,
+          p_status VARCHAR DEFAULT 'success',
+          p_error_message TEXT DEFAULT NULL
+        )
+        RETURNS UUID AS $$
+        DECLARE
+          v_user_id UUID;
+          v_restaurant_id UUID;
+          v_audit_id UUID;
+        BEGIN
+          -- Get current user ID
+          v_user_id := auth.uid();
+
+          -- Get user's restaurant ID if user exists
+          IF v_user_id IS NOT NULL THEN
+            SELECT restaurant_id INTO v_restaurant_id
+            FROM user_profiles
+            WHERE id = v_user_id;
+          END IF;
+
+          -- Insert audit log entry
+          INSERT INTO security_audit_log (
+            user_id,
+            restaurant_id,
+            action,
+            resource_type,
+            resource_id,
+            ip_address,
+            user_agent,
+            metadata,
+            status,
+            error_message
+          ) VALUES (
+            v_user_id,
+            v_restaurant_id,
+            p_action,
+            p_resource_type,
+            p_resource_id,
+            p_ip_address,
+            p_user_agent,
+            p_metadata,
+            p_status,
+            p_error_message
+          ) RETURNING id INTO v_audit_id;
+
+          RETURN v_audit_id;
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      ]]>
+    </createProcedure>
+  </changeSet>
+
+  <!-- Enable RLS on audit log table -->
+  <changeSet id="15" author="system" context="dev,staging,prod">
+    <comment>Enable Row Level Security on security audit log table</comment>
+
+    <sql>
+      ALTER TABLE security_audit_log ENABLE ROW LEVEL SECURITY;
+    </sql>
+  </changeSet>
+
+  <!-- Create RLS policies for audit log -->
+  <changeSet id="16" author="system" context="dev,staging,prod">
+    <comment>Create RLS policies for security audit log</comment>
+
+    <sql splitStatements="false">
+      <![CDATA[
+        -- Only managers can view audit logs from their restaurant
+        CREATE POLICY "Managers can view their restaurant audit logs" ON security_audit_log
+          FOR SELECT USING (
+            restaurant_id IN (
+              SELECT restaurant_id FROM user_profiles
+              WHERE id = auth.uid() AND role = 'manager'
+            )
+          );
+
+        -- System can insert audit logs (via SECURITY DEFINER function)
+        CREATE POLICY "System can insert audit logs" ON security_audit_log
+          FOR INSERT WITH CHECK (true);
+      ]]>
+    </sql>
+  </changeSet>
+
+  <!-- Add audit logging to critical operations -->
+  <changeSet id="17" author="system" context="dev,staging,prod">
+    <comment>Update stock transaction function to include audit logging</comment>
+
+    <sql splitStatements="false">
+      <![CDATA[
+        -- Update the update_stock_transaction function to include audit logging
+        CREATE OR REPLACE FUNCTION update_stock_transaction(
+          transaction_uuid UUID,
+          new_item_id UUID DEFAULT NULL,
+          new_type VARCHAR DEFAULT NULL,
+          new_quantity DECIMAL DEFAULT NULL,
+          new_reason VARCHAR DEFAULT NULL,
+          new_sku VARCHAR DEFAULT NULL,
+          new_notes TEXT DEFAULT NULL
+        )
+        RETURNS TABLE(success BOOLEAN, message TEXT) AS $$
+        DECLARE
+          old_transaction stock_transactions%ROWTYPE;
+          old_item inventory_items%ROWTYPE;
+          new_item inventory_items%ROWTYPE;
+          quantity_diff DECIMAL;
+        BEGIN
+          -- Get the existing transaction with row lock
+          SELECT * INTO old_transaction
+          FROM stock_transactions
+          WHERE id = transaction_uuid
+          FOR UPDATE;
+
+          IF NOT FOUND THEN
+            -- Log failed attempt
+            PERFORM log_security_audit(
+              'update_stock_transaction_failed',
+              'stock_transaction',
+              transaction_uuid,
+              NULL,
+              NULL,
+              jsonb_build_object('reason', 'transaction_not_found'),
+              'failure',
+              'Transaction not found'
+            );
+            RETURN QUERY SELECT FALSE, 'Transaction not found';
+            RETURN;
+          END IF;
+
+          -- SECURITY: Verify user has access to this transaction (restaurant isolation)
+          IF NOT EXISTS (
+            SELECT 1 FROM stock_transactions
+            WHERE id = transaction_uuid
+            AND restaurant_id IN (
+              SELECT restaurant_id FROM user_profiles WHERE id = auth.uid()
+            )
+          ) THEN
+            -- Log unauthorized attempt
+            PERFORM log_security_audit(
+              'update_stock_transaction_unauthorized',
+              'stock_transaction',
+              transaction_uuid,
+              NULL,
+              NULL,
+              jsonb_build_object('attempted_restaurant_id', old_transaction.restaurant_id),
+              'failure',
+              'Unauthorized: Cannot modify transactions from other restaurants'
+            );
+            RETURN QUERY SELECT FALSE, 'Unauthorized: Cannot modify transactions from other restaurants';
+            RETURN;
+          END IF;
+
+          -- SECURITY: Validate new_item_id belongs to same restaurant
+          IF new_item_id IS NOT NULL AND new_item_id != old_transaction.item_id THEN
+            IF NOT EXISTS (
+              SELECT 1 FROM inventory_items
+              WHERE id = new_item_id
+              AND restaurant_id = old_transaction.restaurant_id
+            ) THEN
+              -- Log failed validation
+              PERFORM log_security_audit(
+                'update_stock_transaction_invalid_item',
+                'stock_transaction',
+                transaction_uuid,
+                NULL,
+                NULL,
+                jsonb_build_object('attempted_item_id', new_item_id),
+                'failure',
+                'Unauthorized: Item does not belong to this restaurant'
+              );
+              RETURN QUERY SELECT FALSE, 'Unauthorized: Item does not belong to this restaurant';
+              RETURN;
+            END IF;
+          END IF;
+
+          -- Get old item details
+          SELECT * INTO old_item FROM inventory_items WHERE id = old_transaction.item_id FOR UPDATE;
+
+          -- Handle item_id or type changes (two-step stock adjustment)
+          IF (new_item_id IS NOT NULL AND new_item_id != old_transaction.item_id) OR
+             (new_type IS NOT NULL AND new_type != old_transaction.type) THEN
+
+            -- Revert the old transaction's effect
+            IF old_transaction.type = 'in' THEN
+              UPDATE inventory_items
+              SET current_stock = current_stock - old_transaction.quantity
+              WHERE id = old_transaction.item_id;
+            ELSE
+              UPDATE inventory_items
+              SET current_stock = current_stock + old_transaction.quantity
+              WHERE id = old_transaction.item_id;
+            END IF;
+
+            -- Get new item details
+            SELECT * INTO new_item
+            FROM inventory_items
+            WHERE id = COALESCE(new_item_id, old_transaction.item_id)
+            FOR UPDATE;
+
+            -- Apply the new transaction's effect
+            IF COALESCE(new_type, old_transaction.type) = 'in' THEN
+              UPDATE inventory_items
+              SET current_stock = current_stock + COALESCE(new_quantity, old_transaction.quantity)
+              WHERE id = COALESCE(new_item_id, old_transaction.item_id);
+            ELSE
+              UPDATE inventory_items
+              SET current_stock = current_stock - COALESCE(new_quantity, old_transaction.quantity)
+              WHERE id = COALESCE(new_item_id, old_transaction.item_id);
+            END IF;
+
+          -- Handle quantity-only changes
+          ELSIF new_quantity IS NOT NULL AND new_quantity != old_transaction.quantity THEN
+            quantity_diff := new_quantity - old_transaction.quantity;
+
+            IF old_transaction.type = 'in' THEN
+              UPDATE inventory_items
+              SET current_stock = current_stock + quantity_diff
+              WHERE id = old_transaction.item_id;
+            ELSE
+              UPDATE inventory_items
+              SET current_stock = current_stock - quantity_diff
+              WHERE id = old_transaction.item_id;
+            END IF;
+          END IF;
+
+          -- Update the transaction
+          UPDATE stock_transactions
+          SET
+            item_id = COALESCE(new_item_id, old_transaction.item_id),
+            type = COALESCE(new_type, old_transaction.type),
+            quantity = COALESCE(new_quantity, old_transaction.quantity),
+            reason = COALESCE(new_reason, old_transaction.reason),
+            sku = COALESCE(new_sku, old_transaction.sku),
+            notes = COALESCE(new_notes, old_transaction.notes)
+          WHERE id = transaction_uuid;
+
+          -- Check for low stock alerts
+          PERFORM check_low_stock_alert(old_transaction.item_id);
+
+          -- Log successful update
+          PERFORM log_security_audit(
+            'update_stock_transaction',
+            'stock_transaction',
+            transaction_uuid,
+            NULL,
+            NULL,
+            jsonb_build_object(
+              'old_values', row_to_json(old_transaction),
+              'new_item_id', new_item_id,
+              'new_type', new_type,
+              'new_quantity', new_quantity,
+              'new_reason', new_reason
+            ),
+            'success',
+            NULL
+          );
+
+          RETURN QUERY SELECT TRUE, 'Transaction updated successfully';
+        END;
+        $$ LANGUAGE plpgsql SECURITY DEFINER;
+      ]]>
+    </sql>
+  </changeSet>
+
+</databaseChangeLog>
