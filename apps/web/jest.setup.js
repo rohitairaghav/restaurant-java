@@ -10,6 +10,17 @@ jest.mock('next/navigation', () => ({
   usePathname: () => '/dashboard',
 }))
 
+// Mock jose library to prevent ESM issues
+jest.mock('jose', () => ({
+  compactDecrypt: jest.fn(),
+  compactSign: jest.fn(),
+  decodeJwt: jest.fn(),
+  jwtVerify: jest.fn(),
+  SignJWT: jest.fn(),
+  importJWK: jest.fn(),
+  exportJWK: jest.fn(),
+}))
+
 // Supabase will be mocked in individual test files
 
 // Mock IndexedDB for offline tests

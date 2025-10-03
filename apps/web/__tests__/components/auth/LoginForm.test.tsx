@@ -26,7 +26,7 @@ describe('LoginForm', () => {
   it('should render login form', () => {
     render(<LoginForm />);
 
-    expect(screen.getByText('Sign In')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Sign In' })).toBeInTheDocument();
     expect(screen.getByLabelText('Email')).toBeInTheDocument();
     expect(screen.getByLabelText('Password')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument();

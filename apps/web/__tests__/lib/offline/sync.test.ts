@@ -1,6 +1,3 @@
-import { SyncManager } from '@/lib/offline/sync';
-import { createClient } from '@/lib/supabase';
-
 // Mock the offline database
 const mockOfflineDB = {
   stockTransactions: {
@@ -22,6 +19,9 @@ const mockOfflineDB = {
 jest.mock('@/lib/offline/database', () => ({
   offlineDB: mockOfflineDB,
 }));
+
+import { SyncManager } from '@/lib/offline/sync';
+import { createClient } from '@/lib/supabase';
 
 // Supabase is mocked globally in jest.setup.js
 const mockSupabase = createClient() as any;

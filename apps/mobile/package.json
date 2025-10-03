@@ -9,7 +9,9 @@
     "web": "expo start --web",
     "build": "eas build",
     "submit": "eas submit",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "test": "echo 'No tests configured for mobile app'",
+    "test:coverage": "echo 'No tests configured for mobile app'"
   },
   "dependencies": {
     "@expo/vector-icons": "^13.0.0",

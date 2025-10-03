@@ -33,6 +33,7 @@ describe('Utils', () => {
           user_id: 'user1',
           restaurant_id: 'rest1',
           created_at: '2023-01-01',
+          updated_at: '2023-01-01',
         },
         {
           id: '2',
@@ -43,6 +44,7 @@ describe('Utils', () => {
           user_id: 'user1',
           restaurant_id: 'rest1',
           created_at: '2023-01-02',
+          updated_at: '2023-01-02',
         },
       ];
 
@@ -61,6 +63,7 @@ describe('Utils', () => {
           user_id: 'user1',
           restaurant_id: 'rest1',
           created_at: '2023-01-01',
+          updated_at: '2023-01-01',
         },
         {
           id: '2',
@@ -71,6 +74,7 @@ describe('Utils', () => {
           user_id: 'user1',
           restaurant_id: 'rest1',
           created_at: '2023-01-02',
+          updated_at: '2023-01-02',
         },
       ];
 
@@ -94,6 +98,7 @@ describe('Utils', () => {
           user_id: 'user1',
           restaurant_id: 'rest1',
           created_at: '2023-01-01',
+          updated_at: '2023-01-01',
         },
         {
           id: '2',
@@ -104,6 +109,7 @@ describe('Utils', () => {
           user_id: 'user1',
           restaurant_id: 'rest1',
           created_at: '2023-01-02',
+          updated_at: '2023-01-02',
         },
       ];
 

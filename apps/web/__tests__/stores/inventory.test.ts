@@ -2,10 +2,23 @@ import { renderHook, act } from '@testing-library/react';
 import { useInventoryStore } from '@/lib/stores/inventory';
 import type { InventoryItem } from '@restaurant-inventory/shared';
 
-import { createClient } from '@/lib/supabase';
+// Mock Supabase
+const mockSupabase = {
+  from: jest.fn(() => ({
+    select: jest.fn().mockReturnThis(),
+    insert: jest.fn().mockReturnThis(),
+    update: jest.fn().mockReturnThis(),
+    delete: jest.fn().mockReturnThis(),
+    eq: jest.fn().mockReturnThis(),
+    order: jest.fn().mockReturnThis(),
+    limit: jest.fn().mockReturnThis(),
+    single: jest.fn().mockResolvedValue({ data: null, error: null }),
+  })),
+};
 
-// Supabase is mocked globally in jest.setup.js
-const mockSupabase = createClient() as any;
+jest.mock('@/lib/supabase', () => ({
+  createClient: () => mockSupabase,
+}));
 
 describe('Inventory Store', () => {
   const mockItems: InventoryItem[] = [

@@ -13,7 +13,7 @@ const mockSupabase = {
     select: jest.fn().mockReturnThis(),
     insert: jest.fn().mockReturnThis(),
     eq: jest.fn().mockReturnThis(),
-    single: jest.fn(),
+    single: jest.fn().mockResolvedValue({ data: null, error: null }),
   })),
 };
 
@@ -49,7 +49,8 @@ describe('Auth Store', () => {
         error: null,
       });
 
-      mockSupabase.from().single.mockResolvedValue({
+      const mockFrom = mockSupabase.from();
+      mockFrom.single.mockResolvedValue({
         data: mockUser,
         error: null,
       });
@@ -101,7 +102,8 @@ describe('Auth Store', () => {
         error: null,
       });
 
-      mockSupabase.from().single.mockResolvedValue({
+      const mockFrom = mockSupabase.from();
+      mockFrom.single.mockResolvedValue({
         data: mockUser,
         error: null,
       });
@@ -166,7 +168,8 @@ describe('Auth Store', () => {
         data: { session: { user: { id: '1' } } },
       });
 
-      mockSupabase.from().single.mockResolvedValue({
+      const mockFrom = mockSupabase.from();
+      mockFrom.single.mockResolvedValue({
         data: mockUser,
         error: null,
       });
