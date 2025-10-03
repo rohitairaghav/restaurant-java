@@ -34,9 +34,6 @@ export default function StockForm({ onClose, transaction }: StockFormProps) {
     fetchItems();
   }, [fetchItems]);
 
-  // Store the original quantity for stock adjustment
-  const originalQuantity = transaction?.quantity || 0;
-
   const availableReasons = formData.type === 'in'
     ? TRANSACTION_REASONS.in
     : TRANSACTION_REASONS.out;
@@ -58,8 +55,7 @@ export default function StockForm({ onClose, transaction }: StockFormProps) {
             reason: formData.reason as any,
             sku: formData.sku || undefined,
             notes: formData.notes || undefined,
-          },
-          originalQuantity
+          }
         );
       } else {
         // Add new transaction

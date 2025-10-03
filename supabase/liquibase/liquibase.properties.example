@@ -4,9 +4,9 @@
 # Supabase PostgreSQL connection
 # Update these values with your actual Supabase database credentials
 driver=org.postgresql.Driver
-url=jdbc:postgresql://db.ljfnqzlzffvfhsantcqy.supabase.co:5432/postgres
+url=jdbc:postgresql://db.YOUR_PROJECT_REF.supabase.co:5432/postgres
 username=postgres
-password=Test@123restro
+password=YOUR_DATABASE_PASSWORD
 
 # Changelog file
 changeLogFile=changelogs/db.changelog-master.xml
@@ -31,3 +31,9 @@ liquibaseHubMode=off
 # Additional settings
 databaseChangeLogTableName=databasechangelog
 databaseChangeLogLockTableName=databasechangeloglock
+
+# SECURITY NOTE:
+# 1. Copy this file to liquibase.properties (git-ignored)
+# 2. Replace YOUR_PROJECT_REF with your Supabase project reference
+# 3. Replace YOUR_DATABASE_PASSWORD with your actual database password
+# 4. NEVER commit liquibase.properties with real credentials to git

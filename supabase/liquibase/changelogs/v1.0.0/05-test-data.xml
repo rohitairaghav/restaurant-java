@@ -152,11 +152,11 @@
             -- Out of stock alert
             ('a50e8400-e29b-41d4-a716-446655440000', '850e8400-e29b-41d4-a716-446655440007', 'out_of_stock', 'Truffle Oil is out of stock', false, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '30 minutes'),
             -- Low stock alerts
-            ('a50e8400-e29b-41d4-a716-446655440001', '850e8400-e29b-41d4-a716-446655440006', 'low_stock', 'Parmesan Cheese is running low (Current: 2 kg, Minimum: 5 kg)', false, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 hour'),
-            ('a50e8400-e29b-41d4-a716-446655440002', '850e8400-e29b-41d4-a716-446655440001', 'low_stock', 'Fresh Mozzarella is running low (Current: 15 kg, Minimum: 3 kg)', true, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '2 hours'),
+            ('a50e8400-e29b-41d4-a716-446655440001', '850e8400-e29b-41d4-a716-446655440006', 'low_stock', 'Parmesan Cheese is running low', false, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 hour'),
+            ('a50e8400-e29b-41d4-a716-446655440002', '850e8400-e29b-41d4-a716-446655440001', 'low_stock', 'Fresh Mozzarella is running low', true, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '2 hours'),
             -- Historical alerts for demonstration
-            ('a50e8400-e29b-41d4-a716-446655440003', '850e8400-e29b-41d4-a716-446655440004', 'low_stock', 'Basil Leaves is running low (Current: 20 bunch, Minimum: 5 bunch)', true, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 day'),
-            ('a50e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440008', 'low_stock', 'Sashimi Grade Tuna is running low (Current: 10 kg, Minimum: 3 kg)', false, '550e8400-e29b-41d4-a716-446655440002', NOW() - INTERVAL '45 minutes');
+            ('a50e8400-e29b-41d4-a716-446655440003', '850e8400-e29b-41d4-a716-446655440004', 'low_stock', 'Basil Leaves is running low', true, '550e8400-e29b-41d4-a716-446655440000', NOW() - INTERVAL '1 day'),
+            ('a50e8400-e29b-41d4-a716-446655440004', '850e8400-e29b-41d4-a716-446655440008', 'low_stock', 'Sashimi Grade Tuna is running low', false, '550e8400-e29b-41d4-a716-446655440002', NOW() - INTERVAL '45 minutes');
         </sql>
         <rollback>
             DELETE FROM alerts WHERE id IN (

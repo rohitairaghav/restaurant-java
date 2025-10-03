@@ -13,7 +13,7 @@ interface StockState {
   // Actions
   fetchTransactions: () => Promise<void>;
   addTransaction: (transaction: StockTransactionInput) => Promise<void>;
-  updateTransaction: (id: string, updates: StockTransactionUpdate, oldQuantity: number) => Promise<void>;
+  updateTransaction: (id: string, updates: StockTransactionUpdate) => Promise<void>;
 }
 
 export const useStockStore = create<StockState>((set, get) => ({
@@ -131,7 +131,7 @@ export const useStockStore = create<StockState>((set, get) => ({
     }
   },
 
-  updateTransaction: async (id: string, updates: StockTransactionUpdate, oldQuantity: number) => {
+  updateTransaction: async (id: string, updates: StockTransactionUpdate) => {
     set({ loading: true, error: null });
     try {
       if (isDemoMode()) {
@@ -151,54 +151,52 @@ export const useStockStore = create<StockState>((set, get) => ({
 
       const supabase = createClient();
 
-      // If quantity changed, we need to adjust inventory stock
-      if (updates.quantity !== undefined) {
-        const transaction = get().transactions.find(t => t.id === id);
-        if (transaction) {
-          // Calculate the difference in quantity
-          const quantityDiff = updates.quantity - oldQuantity;
+      // Validate inputs
+      if (updates.quantity !== undefined && updates.quantity <= 0) {
+        throw new Error('Quantity must be greater than 0');
+      }
 
-          // Get current stock
-          const { data: item } = await supabase
-            .from('inventory_items')
-            .select('current_stock')
-            .eq('id', transaction.item_id)
-            .single();
+      // Use secure database function for atomic updates
+      const { data, error } = await supabase.rpc('update_stock_transaction', {
+        transaction_uuid: id,
+        new_item_id: updates.item_id || null,
+        new_type: updates.type || null,
+        new_quantity: updates.quantity || null,
+        new_reason: updates.reason || null,
+        new_sku: updates.sku || null,
+        new_notes: updates.notes || null,
+      });
 
-          if (item) {
-            // Adjust stock based on transaction type and quantity difference
-            const stockAdjustment = transaction.type === 'in' ? quantityDiff : -quantityDiff;
-            const newStock = item.current_stock + stockAdjustment;
+      if (error) throw error;
 
-            // Update inventory stock
-            await supabase
-              .from('inventory_items')
-              .update({ current_stock: newStock })
-              .eq('id', transaction.item_id);
-          }
+      // Check the response from the function
+      if (data && data.length > 0) {
+        const result = data[0];
+        if (!result.success) {
+          throw new Error(result.message);
         }
       }
 
-      // Update the transaction
-      const { data, error } = await supabase
+      // Fetch the updated transaction
+      const { data: updatedTransaction, error: fetchError } = await supabase
         .from('stock_transactions')
-        .update(updates)
-        .eq('id', id)
         .select(`
           *,
           inventory_items(name, unit),
           user_profiles(email)
         `)
+        .eq('id', id)
         .single();
 
-      if (error) throw error;
+      if (fetchError) throw fetchError;
 
       set(state => ({
-        transactions: state.transactions.map(t => (t.id === id ? data : t)),
+        transactions: state.transactions.map(t => (t.id === id ? updatedTransaction : t)),
         loading: false
       }));
     } catch (error: any) {
       set({ error: error.message, loading: false });
+      throw error;
     }
   },
 }));

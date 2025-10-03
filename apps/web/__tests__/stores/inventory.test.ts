@@ -149,11 +149,18 @@ describe('Inventory Store', () => {
   });
 
   describe('deleteItem', () => {
-    it('should delete item successfully', async () => {
+    it('should delete item successfully when no transactions or alerts exist', async () => {
       useInventoryStore.setState({ items: mockItems });
 
+      // Mock both checks to return false
+      mockSupabase.from().select().eq().limit
+        .mockResolvedValueOnce({ data: [], error: null }) // transactions
+        .mockResolvedValueOnce({ data: [], error: null }); // alerts
+
+      // Mock delete operation
       mockSupabase.from().eq.mockReturnThis();
-      mockSupabase.from().single.mockResolvedValue({
+      mockSupabase.from().delete.mockReturnThis();
+      mockSupabase.from().delete().eq.mockResolvedValue({
         error: null,
       });
 
@@ -166,6 +173,168 @@ describe('Inventory Store', () => {
       expect(result.current.items).toHaveLength(1);
       expect(result.current.items[0].id).toBe('2');
       expect(result.current.loading).toBe(false);
+    });
+
+    it('should prevent deletion when item has transactions', async () => {
+      useInventoryStore.setState({ items: mockItems });
+
+      // Mock checkItemHasTransactions to return true, checkItemHasAlerts to return false
+      mockSupabase.from().select().eq().limit
+        .mockResolvedValueOnce({ data: [{ id: 'transaction1' }], error: null }) // transactions
+        .mockResolvedValueOnce({ data: [], error: null }); // alerts
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      await act(async () => {
+        await result.current.deleteItem('1');
+      });
+
+      // Item should not be deleted
+      expect(result.current.items).toHaveLength(2);
+      expect(result.current.error).toBe('Cannot delete inventory item that has stock transactions. Please delete all related stock transactions first.');
+      expect(result.current.loading).toBe(false);
+    });
+
+    it('should prevent deletion when item has alerts', async () => {
+      useInventoryStore.setState({ items: mockItems });
+
+      // Mock checkItemHasTransactions to return false, checkItemHasAlerts to return true
+      mockSupabase.from().select().eq().limit
+        .mockResolvedValueOnce({ data: [], error: null }) // transactions
+        .mockResolvedValueOnce({ data: [{ id: 'alert1' }], error: null }); // alerts
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      await act(async () => {
+        await result.current.deleteItem('1');
+      });
+
+      // Item should not be deleted
+      expect(result.current.items).toHaveLength(2);
+      expect(result.current.error).toBe('Cannot delete inventory item that has alerts. Please delete all related alerts first.');
+      expect(result.current.loading).toBe(false);
+    });
+
+    it('should prevent deletion when item has both transactions and alerts', async () => {
+      useInventoryStore.setState({ items: mockItems });
+
+      // Mock both checks to return true
+      mockSupabase.from().select().eq().limit
+        .mockResolvedValueOnce({ data: [{ id: 'transaction1' }], error: null }) // transactions
+        .mockResolvedValueOnce({ data: [{ id: 'alert1' }], error: null }); // alerts
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      await act(async () => {
+        await result.current.deleteItem('1');
+      });
+
+      // Item should not be deleted
+      expect(result.current.items).toHaveLength(2);
+      expect(result.current.error).toBe('Cannot delete inventory item that has stock transactions and alerts. Please delete all related stock transactions and alerts first.');
+      expect(result.current.loading).toBe(false);
+    });
+  });
+
+  describe('checkItemHasTransactions', () => {
+    it('should return true when item has transactions', async () => {
+      mockSupabase.from().select().eq().limit.mockResolvedValue({
+        data: [{ id: 'transaction1' }],
+        error: null,
+      });
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      let hasTransactions: boolean;
+      await act(async () => {
+        hasTransactions = await result.current.checkItemHasTransactions('1');
+      });
+
+      expect(hasTransactions).toBe(true);
+      expect(mockSupabase.from).toHaveBeenCalledWith('stock_transactions');
+    });
+
+    it('should return false when item has no transactions', async () => {
+      mockSupabase.from().select().eq().limit.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      let hasTransactions: boolean;
+      await act(async () => {
+        hasTransactions = await result.current.checkItemHasTransactions('1');
+      });
+
+      expect(hasTransactions).toBe(false);
+    });
+
+    it('should handle errors gracefully', async () => {
+      mockSupabase.from().select().eq().limit.mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+      });
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      let hasTransactions: boolean;
+      await act(async () => {
+        hasTransactions = await result.current.checkItemHasTransactions('1');
+      });
+
+      expect(hasTransactions).toBe(false);
+    });
+  });
+
+  describe('checkItemHasAlerts', () => {
+    it('should return true when item has alerts', async () => {
+      mockSupabase.from().select().eq().limit.mockResolvedValue({
+        data: [{ id: 'alert1' }],
+        error: null,
+      });
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      let hasAlerts: boolean;
+      await act(async () => {
+        hasAlerts = await result.current.checkItemHasAlerts('1');
+      });
+
+      expect(hasAlerts).toBe(true);
+      expect(mockSupabase.from).toHaveBeenCalledWith('alerts');
+    });
+
+    it('should return false when item has no alerts', async () => {
+      mockSupabase.from().select().eq().limit.mockResolvedValue({
+        data: [],
+        error: null,
+      });
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      let hasAlerts: boolean;
+      await act(async () => {
+        hasAlerts = await result.current.checkItemHasAlerts('1');
+      });
+
+      expect(hasAlerts).toBe(false);
+    });
+
+    it('should handle errors gracefully', async () => {
+      mockSupabase.from().select().eq().limit.mockResolvedValue({
+        data: null,
+        error: { message: 'Database error' },
+      });
+
+      const { result } = renderHook(() => useInventoryStore());
+
+      let hasAlerts: boolean;
+      await act(async () => {
+        hasAlerts = await result.current.checkItemHasAlerts('1');
+      });
+
+      expect(hasAlerts).toBe(false);
     });
   });
 });

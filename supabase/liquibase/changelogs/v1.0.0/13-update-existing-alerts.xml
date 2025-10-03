@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.3.xsd">
+
+    <!-- Update existing alerts to use simplified messages -->
+    <changeSet id="13-1" author="system" context="dev,staging,prod">
+        <comment>Update existing alerts to remove redundant bracket information</comment>
+        <sql>
+            -- Update low stock alerts to remove bracket information
+            UPDATE alerts 
+            SET message = REGEXP_REPLACE(
+                message, 
+                ' is running low \(Current: [^)]+\)', 
+                ' is running low'
+            )
+            WHERE type = 'low_stock' 
+            AND message LIKE '% is running low (Current:%';
+        </sql>
+        <rollback>
+            -- This rollback is not possible as we can't restore the original bracket information
+            -- The rollback would need to be handled manually if required
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

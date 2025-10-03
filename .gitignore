@@ -138,3 +138,4 @@ logs
 
 # Liquibase
 supabase/liquibase/lib/
+supabase/liquibase/liquibase.properties
