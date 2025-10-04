@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!--
+    PRODUCTION CHANGELOG
+
+    This is the consolidated production-ready schema for fresh deployments.
+    Use this instead of the incremental development migrations (db.changelog-master.xml)
+    when deploying to a new production environment.
+
+    To use this:
+    1. Update liquibase.properties to point to this file:
+       changeLogFile=changelogs/db.changelog-production.xml
+
+    2. Run: npm run db:update
+
+    For existing databases that already have incremental migrations applied,
+    continue using db.changelog-master.xml
+    -->
+
+    <include file="changelogs/v1.0.0-consolidated/production-schema.xml" relativeToChangelogFile="false"/>
+
+</databaseChangeLog>
