@@ -69,13 +69,10 @@ jobs:
           echo "Vercel.json exists: $(test -f vercel.json && echo 'YES' || echo 'NO')"
 
       - name: Deploy to Vercel
-        uses: vercel/vercel-action@v1.1.1
+        uses: vercel/actions/deploy@v2
         with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
+          token: ${{ secrets.VERCEL_TOKEN }}
+          org-id: ${{ secrets.VERCEL_ORG_ID }}
+          project-id: ${{ secrets.VERCEL_PROJECT_ID }}
           working-directory: apps/web
-          vercel-args: '--prod'
-        env:
-          NPM_CONFIG_PACKAGE_MANAGER: npm
-          PACKAGE_MANAGER: npm
+          production: true
