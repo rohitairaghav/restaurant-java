@@ -189,6 +189,7 @@ export const mockStockTransactions: StockTransaction[] = [
     user_id: 'demo-staff',
     restaurant_id: 'demo-restaurant',
     created_at: '2024-09-27T08:30:00.000Z',
+    updated_at: '2024-09-27T08:30:00.000Z',
   },
   {
     id: 'txn-2',
@@ -200,6 +201,7 @@ export const mockStockTransactions: StockTransaction[] = [
     user_id: 'demo-staff',
     restaurant_id: 'demo-restaurant',
     created_at: '2024-09-27T12:15:00.000Z',
+    updated_at: '2024-09-27T12:15:00.000Z',
   },
   {
     id: 'txn-3',
@@ -211,6 +213,7 @@ export const mockStockTransactions: StockTransaction[] = [
     user_id: 'demo-staff',
     restaurant_id: 'demo-restaurant',
     created_at: '2024-09-27T11:45:00.000Z',
+    updated_at: '2024-09-27T11:45:00.000Z',
   },
   {
     id: 'txn-4',
@@ -222,6 +225,7 @@ export const mockStockTransactions: StockTransaction[] = [
     user_id: 'demo-manager',
     restaurant_id: 'demo-restaurant',
     created_at: '2024-09-27T09:00:00.000Z',
+    updated_at: '2024-09-27T09:00:00.000Z',
   },
   {
     id: 'txn-5',
@@ -233,6 +237,7 @@ export const mockStockTransactions: StockTransaction[] = [
     user_id: 'demo-staff',
     restaurant_id: 'demo-restaurant',
     created_at: '2024-09-27T13:20:00.000Z',
+    updated_at: '2024-09-27T13:20:00.000Z',
   },
   {
     id: 'txn-6',
@@ -244,6 +249,7 @@ export const mockStockTransactions: StockTransaction[] = [
     user_id: 'demo-staff',
     restaurant_id: 'demo-restaurant',
     created_at: '2024-09-26T19:30:00.000Z',
+    updated_at: '2024-09-26T19:30:00.000Z',
   },
   {
     id: 'txn-7',
@@ -255,6 +261,7 @@ export const mockStockTransactions: StockTransaction[] = [
     user_id: 'demo-staff',
     restaurant_id: 'demo-restaurant',
     created_at: '2024-09-27T14:10:00.000Z',
+    updated_at: '2024-09-27T14:10:00.000Z',
   },
 ];
 

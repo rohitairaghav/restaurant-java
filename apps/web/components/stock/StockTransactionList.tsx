@@ -103,6 +103,14 @@ export default function StockTransactionList() {
                 <p className="text-sm text-gray-600">
                   Quantity: {transaction.quantity} {(transaction as any).inventory_items?.unit}
                 </p>
+                {transaction.cost && (
+                  <p className="text-sm text-gray-600">
+                    Total Cost: ${transaction.cost.toFixed(2)}
+                    <span className="text-xs text-gray-500 ml-2">
+                      (${(transaction.cost / transaction.quantity).toFixed(2)}/unit)
+                    </span>
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col sm:flex-row justify-between text-sm text-gray-500 pt-2 border-t border-gray-100">
@@ -131,6 +139,9 @@ export default function StockTransactionList() {
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Quantity
+                </th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  Total Cost
                 </th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                   Reason
@@ -175,6 +186,18 @@ export default function StockTransactionList() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                     {transaction.quantity} {(transaction as any).inventory_items?.unit}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    {transaction.cost ? (
+                      <div>
+                        <div>${transaction.cost.toFixed(2)}</div>
+                        <div className="text-xs text-gray-500">
+                          ${(transaction.cost / transaction.quantity).toFixed(2)}/unit
+                        </div>
+                      </div>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">

@@ -1,0 +1,230 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- User Management RLS Policies for Managers v1.0.0 -->
+
+    <changeSet id="12" author="system" context="dev,staging,prod">
+        <comment>Add RLS policies for managers to manage users in their restaurant</comment>
+        <sql>
+            -- Managers can view all users in their restaurant
+            CREATE POLICY "Managers can view restaurant users" ON user_profiles
+                FOR SELECT USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                );
+
+            -- Managers can insert new users into their restaurant
+            CREATE POLICY "Managers can create restaurant users" ON user_profiles
+                FOR INSERT WITH CHECK (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                );
+
+            -- Managers can update users in their restaurant (except cannot change own role)
+            CREATE POLICY "Managers can update restaurant users" ON user_profiles
+                FOR UPDATE USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                    AND (
+                        -- Either updating someone else, or updating self without changing role
+                        user_profiles.id != auth.uid()
+                        OR (user_profiles.id = auth.uid() AND user_profiles.role = (SELECT role FROM user_profiles WHERE id = auth.uid()))
+                    )
+                );
+
+            -- Managers can delete users in their restaurant (except themselves)
+            CREATE POLICY "Managers can delete restaurant users" ON user_profiles
+                FOR DELETE USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                    AND user_profiles.id != auth.uid()
+                );
+        </sql>
+        <rollback>
+            DROP POLICY IF EXISTS "Managers can view restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can create restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can update restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can delete restaurant users" ON user_profiles;
+        </rollback>
+    </changeSet>
+
+    <changeSet id="13" author="system" context="dev,staging,prod">
+        <comment>Fix infinite recursion in RLS policies - Drop old policies</comment>
+        <sql>
+            -- Drop the problematic policies that cause infinite recursion
+            DROP POLICY IF EXISTS "Managers can view restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can create restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can update restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can delete restaurant users" ON user_profiles;
+        </sql>
+        <rollback>
+            -- Recreate the old policies if rolled back
+            CREATE POLICY "Managers can view restaurant users" ON user_profiles
+                FOR SELECT USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                );
+
+            CREATE POLICY "Managers can create restaurant users" ON user_profiles
+                FOR INSERT WITH CHECK (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                );
+
+            CREATE POLICY "Managers can update restaurant users" ON user_profiles
+                FOR UPDATE USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                );
+
+            CREATE POLICY "Managers can delete restaurant users" ON user_profiles
+                FOR DELETE USING (
+                    EXISTS (
+                        SELECT 1 FROM user_profiles AS manager
+                        WHERE manager.id = auth.uid()
+                        AND manager.role = 'manager'
+                        AND manager.restaurant_id = user_profiles.restaurant_id
+                    )
+                    AND user_profiles.id != auth.uid()
+                );
+        </rollback>
+    </changeSet>
+
+    <changeSet id="14" author="system" context="dev,staging,prod">
+        <comment>Create helper function to prevent infinite recursion in RLS policies</comment>
+        <sql splitStatements="false">
+            -- Helper function to get current user's profile without causing recursion
+            -- Marked as STABLE and SECURITY DEFINER to be evaluated once per query
+            CREATE OR REPLACE FUNCTION public.get_my_profile()
+            RETURNS TABLE (user_id uuid, user_role text, user_restaurant_id uuid)
+            LANGUAGE sql
+            STABLE
+            SECURITY DEFINER
+            AS $function$
+                SELECT id, role, restaurant_id
+                FROM user_profiles
+                WHERE id = auth.uid()
+                LIMIT 1;
+            $function$;
+
+            -- Grant execute permission to authenticated users
+            GRANT EXECUTE ON FUNCTION public.get_my_profile() TO authenticated;
+        </sql>
+        <rollback>
+            DROP FUNCTION IF EXISTS public.get_my_profile();
+        </rollback>
+    </changeSet>
+
+    <changeSet id="15" author="system" context="dev,staging,prod">
+        <comment>Add fixed RLS policies using helper function to prevent recursion</comment>
+        <sql>
+            -- Users can view their own profile
+            CREATE POLICY "Users view own profile" ON user_profiles
+                FOR SELECT
+                USING (id = auth.uid());
+
+            -- Users can update their own profile (except role and restaurant_id)
+            CREATE POLICY "Users update own profile" ON user_profiles
+                FOR UPDATE
+                USING (id = auth.uid())
+                WITH CHECK (
+                    id = auth.uid()
+                    AND role = (SELECT user_role FROM get_my_profile())
+                    AND restaurant_id = (SELECT user_restaurant_id FROM get_my_profile())
+                );
+
+            -- Managers can view all users in their restaurant
+            CREATE POLICY "Managers view restaurant users" ON user_profiles
+                FOR SELECT
+                USING (
+                    restaurant_id IN (
+                        SELECT user_restaurant_id
+                        FROM get_my_profile()
+                        WHERE user_role = 'manager'
+                    )
+                );
+
+            -- Managers can create users in their restaurant
+            CREATE POLICY "Managers create restaurant users" ON user_profiles
+                FOR INSERT
+                WITH CHECK (
+                    restaurant_id IN (
+                        SELECT user_restaurant_id
+                        FROM get_my_profile()
+                        WHERE user_role = 'manager'
+                    )
+                );
+
+            -- Managers can update users in their restaurant
+            CREATE POLICY "Managers update restaurant users" ON user_profiles
+                FOR UPDATE
+                USING (
+                    restaurant_id IN (
+                        SELECT user_restaurant_id
+                        FROM get_my_profile()
+                        WHERE user_role = 'manager'
+                    )
+                )
+                WITH CHECK (
+                    restaurant_id IN (
+                        SELECT user_restaurant_id
+                        FROM get_my_profile()
+                        WHERE user_role = 'manager'
+                    )
+                );
+
+            -- Managers can delete users in their restaurant (except themselves)
+            CREATE POLICY "Managers delete restaurant users" ON user_profiles
+                FOR DELETE
+                USING (
+                    id != auth.uid()
+                    AND restaurant_id IN (
+                        SELECT user_restaurant_id
+                        FROM get_my_profile()
+                        WHERE user_role = 'manager'
+                    )
+                );
+        </sql>
+        <rollback>
+            DROP POLICY IF EXISTS "Users view own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Users update own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers view restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers create restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers update restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers delete restaurant users" ON user_profiles;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

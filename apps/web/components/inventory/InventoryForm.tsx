@@ -20,6 +20,7 @@ export default function InventoryForm({ item, onClose }: InventoryFormProps) {
     category: '',
     unit: '',
     cost_per_unit: '',
+    current_stock: '',
     min_threshold: '',
     supplier_id: '',
   });
@@ -38,6 +39,7 @@ export default function InventoryForm({ item, onClose }: InventoryFormProps) {
         category: item.category,
         unit: item.unit,
         cost_per_unit: item.cost_per_unit.toString(),
+        current_stock: item.current_stock.toString(),
         min_threshold: item.min_threshold.toString(),
         supplier_id: item.supplier_id || '',
       });
@@ -55,8 +57,9 @@ export default function InventoryForm({ item, onClose }: InventoryFormProps) {
         category: formData.category,
         unit: formData.unit,
         cost_per_unit: parseFloat(formData.cost_per_unit),
+        current_stock: parseFloat(formData.current_stock),
         min_threshold: parseFloat(formData.min_threshold),
-        supplier_id: formData.supplier_id || null,
+        supplier_id: formData.supplier_id || undefined,
         restaurant_id: user!.restaurant_id,
       };
 
@@ -159,6 +162,22 @@ export default function InventoryForm({ item, onClose }: InventoryFormProps) {
               type="number"
               name="cost_per_unit"
               value={formData.cost_per_unit}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Current stock *
+            </label>
+            <input
+              type="number"
+              name="current_stock"
+              value={formData.current_stock}
               onChange={handleChange}
               step="0.01"
               min="0"

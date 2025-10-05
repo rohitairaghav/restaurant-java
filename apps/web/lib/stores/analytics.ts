@@ -64,8 +64,8 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
             ];
 
         const analyticsData: AnalyticsData = {
-          daily_usage: period === 'daily' ? usageData : [],
-          weekly_usage: period === 'weekly' ? usageData : [],
+          daily_usage: period === 'daily' ? usageData as { date: string; items: { item_id: string; quantity: number; }[] }[] : [],
+          weekly_usage: period === 'weekly' ? usageData as { week: string; items: { item_id: string; quantity: number; }[] }[] : [],
           inventory_value: inventoryValue,
           low_stock_count: lowStockCount,
         };
@@ -138,17 +138,29 @@ export const useAnalyticsStore = create<AnalyticsState>((set, get) => ({
       });
 
       // Format usage data
-      const usageArray = Array.from(usageMap.entries()).map(([dateKey, itemMap]) => ({
-        [period === 'daily' ? 'date' : 'week']: dateKey,
-        items: Array.from(itemMap.entries()).map(([item_id, quantity]) => ({
-          item_id,
-          quantity
-        }))
-      }));
+      const dailyUsageArray = period === 'daily'
+        ? Array.from(usageMap.entries()).map(([dateKey, itemMap]) => ({
+            date: dateKey,
+            items: Array.from(itemMap.entries()).map(([item_id, quantity]) => ({
+              item_id,
+              quantity
+            }))
+          }))
+        : [];
+
+      const weeklyUsageArray = period === 'weekly'
+        ? Array.from(usageMap.entries()).map(([dateKey, itemMap]) => ({
+            week: dateKey,
+            items: Array.from(itemMap.entries()).map(([item_id, quantity]) => ({
+              item_id,
+              quantity
+            }))
+          }))
+        : [];
 
       const analyticsData: AnalyticsData = {
-        daily_usage: period === 'daily' ? usageArray : [],
-        weekly_usage: period === 'weekly' ? usageArray : [],
+        daily_usage: dailyUsageArray,
+        weekly_usage: weeklyUsageArray,
         inventory_value: inventoryValue,
         low_stock_count: lowStockCount || 0,
       };

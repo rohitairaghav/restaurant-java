@@ -47,6 +47,7 @@ export interface StockTransaction {
   item_id: string;
   type: 'in' | 'out';
   quantity: number;
+  cost?: number;
   reason: 'purchase' | 'delivery' | 'sale' | 'waste' | 'transfer';
   sku?: string;
   notes?: string;

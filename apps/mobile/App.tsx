@@ -118,7 +118,8 @@ class App extends React.Component<AppProps, AppState> {
           notes: 'Weekly delivery from supplier',
           user_id: 'user-manager',
           restaurant_id: 'demo-restaurant',
-          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
+          created_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString()
         },
         {
           id: 't2',
@@ -129,7 +130,8 @@ class App extends React.Component<AppProps, AppState> {
           notes: 'Used for dinner service',
           user_id: 'user-kitchen',
           restaurant_id: 'demo-restaurant',
-          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
+          created_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString()
         },
         {
           id: 't3',
@@ -140,7 +142,8 @@ class App extends React.Component<AppProps, AppState> {
           notes: 'Emergency restock',
           user_id: 'user-staff',
           restaurant_id: 'demo-restaurant',
-          created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
+          created_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
+          updated_at: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString()
         }
       ],
       showAddModal: false,

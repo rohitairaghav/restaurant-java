@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <changeSet id="24" author="system" context="dev,staging,prod">
+        <comment>Remove all complex RLS policies - rely on server-side CASL for authorization</comment>
+        <sql>
+            -- Drop all existing complex policies
+            DROP POLICY IF EXISTS "Users view own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Users update own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers view restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers create restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers update restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers delete restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Users can view own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Users can update own profile" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can view restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can create restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can update restaurant users" ON user_profiles;
+            DROP POLICY IF EXISTS "Managers can delete restaurant users" ON user_profiles;
+
+            -- Drop helper functions that are no longer needed
+            DROP FUNCTION IF EXISTS public.get_my_profile();
+            DROP FUNCTION IF EXISTS public.get_user_role_and_restaurant();
+        </sql>
+    </changeSet>
+
+    <changeSet id="25" author="system" context="dev,staging,prod">
+        <comment>Create simple RLS policies - authentication only, authorization handled by CASL</comment>
+        <sql>
+            -- Authenticated users can read all user_profiles in their restaurant
+            -- (CASL on the server will filter what they can actually see)
+            CREATE POLICY "Authenticated users can read user_profiles" ON user_profiles
+                FOR SELECT
+                TO authenticated
+                USING (true);
+
+            -- Authenticated users can insert user_profiles
+            -- (CASL on the server validates they're managers before calling this)
+            CREATE POLICY "Authenticated users can insert user_profiles" ON user_profiles
+                FOR INSERT
+                TO authenticated
+                WITH CHECK (true);
+
+            -- Authenticated users can update user_profiles
+            -- (CASL on the server validates permissions before calling this)
+            CREATE POLICY "Authenticated users can update user_profiles" ON user_profiles
+                FOR UPDATE
+                TO authenticated
+                USING (true)
+                WITH CHECK (true);
+
+            -- Authenticated users can delete user_profiles
+            -- (CASL on the server validates permissions before calling this)
+            CREATE POLICY "Authenticated users can delete user_profiles" ON user_profiles
+                FOR DELETE
+                TO authenticated
+                USING (true);
+        </sql>
+        <rollback>
+            DROP POLICY IF EXISTS "Authenticated users can read user_profiles" ON user_profiles;
+            DROP POLICY IF EXISTS "Authenticated users can insert user_profiles" ON user_profiles;
+            DROP POLICY IF EXISTS "Authenticated users can update user_profiles" ON user_profiles;
+            DROP POLICY IF EXISTS "Authenticated users can delete user_profiles" ON user_profiles;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

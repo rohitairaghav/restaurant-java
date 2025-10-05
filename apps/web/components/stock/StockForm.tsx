@@ -22,6 +22,7 @@ export default function StockForm({ onClose, transaction }: StockFormProps) {
     item_id: transaction?.item_id || '',
     type: (transaction?.type || 'in') as 'in' | 'out',
     quantity: transaction?.quantity?.toString() || '',
+    cost: transaction?.cost?.toString() || '',
     reason: transaction?.reason || '',
     sku: transaction?.sku || '',
     notes: transaction?.notes || '',
@@ -52,6 +53,7 @@ export default function StockForm({ onClose, transaction }: StockFormProps) {
             item_id: formData.item_id,
             type: formData.type,
             quantity: parseFloat(formData.quantity),
+            cost: formData.cost ? parseFloat(formData.cost) : undefined,
             reason: formData.reason as any,
             sku: formData.sku || undefined,
             notes: formData.notes || undefined,
@@ -63,6 +65,7 @@ export default function StockForm({ onClose, transaction }: StockFormProps) {
           item_id: formData.item_id,
           type: formData.type,
           quantity: parseFloat(formData.quantity),
+          cost: formData.cost ? parseFloat(formData.cost) : undefined,
           reason: formData.reason as any,
           sku: formData.sku || undefined,
           notes: formData.notes || undefined,
@@ -176,6 +179,27 @@ export default function StockForm({ onClose, transaction }: StockFormProps) {
               required
               className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Total Cost ($)
+            </label>
+            <input
+              type="number"
+              name="cost"
+              value={formData.cost}
+              onChange={handleChange}
+              step="0.01"
+              min="0"
+              className="w-full px-4 py-3 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-primary-500 touch-manipulation"
+              placeholder="Enter total cost (optional)"
+            />
+            {formData.quantity && formData.cost && (
+              <p className="text-xs text-gray-500 mt-1">
+                Cost per unit: ${(parseFloat(formData.cost) / parseFloat(formData.quantity)).toFixed(2)}
+              </p>
+            )}
           </div>
 
           <div>
