@@ -74,13 +74,47 @@ For each variable:
    - ✅ Development
 5. Click **"Save"**
 
-## Step 5: Deploy
+## Step 5: Configure GitHub Secrets (for GitHub Actions Deployment)
 
-1. Click **"Deploy"**
-2. Wait for the build to complete (usually 2-5 minutes)
-3. Once complete, you'll get a deployment URL like: `https://your-app.vercel.app`
+If you're using the GitHub Actions workflow (`.github/workflows/deploy-web.yml`), you need to add these secrets:
 
-## Step 6: Verify Deployment
+1. Go to your GitHub repository → **Settings → Secrets and variables → Actions**
+2. Click **"New repository secret"** and add:
+
+| Secret Name | How to Get It |
+|------------|---------------|
+| `VERCEL_TOKEN` | Vercel → Account Settings → Tokens → Create Token |
+| `VERCEL_ORG_ID` | Vercel → Settings → Team/User ID |
+| `VERCEL_PROJECT_ID` | Vercel Project → Settings → Project ID |
+| `NEXT_PUBLIC_SUPABASE_URL` | Your Supabase project URL |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Your Supabase anon key |
+
+**To get VERCEL_TOKEN:**
+1. Go to https://vercel.com/account/tokens
+2. Create a new token
+3. Copy and add to GitHub secrets
+
+**To get VERCEL_ORG_ID:**
+1. Run: `vercel whoami` or check Vercel settings
+
+**To get VERCEL_PROJECT_ID:**
+1. Vercel Project → Settings → General → Project ID
+
+## Step 6: Deploy
+
+### Option A: Manual Deploy (Vercel Dashboard)
+1. Click **"Deploy"** in Vercel
+2. Wait for build completion (2-5 minutes)
+
+### Option B: Automatic Deploy (GitHub Actions)
+1. Push to main branch:
+   ```bash
+   git push origin main
+   ```
+2. GitHub Actions will automatically build and deploy
+3. Check progress in GitHub → Actions tab
+
+## Step 7: Verify Deployment
 
 1. Visit your deployment URL
 2. Test the following:
@@ -99,6 +133,25 @@ For each variable:
 ## Troubleshooting
 
 ### Build Fails
+
+**Error**: `Input required and not supplied: vercel-token`
+- **Cause**: GitHub Actions workflow is missing required secrets
+- **Solution**:
+  1. Go to GitHub repository → Settings → Secrets and variables → Actions
+  2. Add required secrets: `VERCEL_TOKEN`, `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`
+  3. See "Step 5: Configure GitHub Secrets" above
+  4. Re-run the GitHub Actions workflow
+
+**Error**: `The specified Root Directory "apps/mobile" does not exist`
+- **Cause**: Vercel project is configured with wrong root directory (`apps/mobile` instead of `apps/web`)
+- **Solution**:
+  1. Go to **Vercel Dashboard** → Select your project
+  2. Click **Settings** → **General**
+  3. Scroll down to **Root Directory** section
+  4. Click **Edit**
+  5. Change from `apps/mobile` to `apps/web`
+  6. Click **Save**
+  7. Go to **Deployments** tab → Latest deployment → Click "..." menu → **Redeploy**
 
 **Error**: `cd: apps/web: No such file or directory`
 - **Cause**: Root Directory is set to `apps/web` but build command tries to `cd apps/web` again
