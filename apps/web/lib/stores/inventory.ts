@@ -1,5 +1,8 @@
 import { create } from 'zustand';
 import type { InventoryItem, InventoryItemInput, Supplier } from '@restaurant-inventory/shared';
+
+// Extended type for adding items with initial stock
+type InventoryItemInputWithStock = InventoryItemInput & { current_stock: number };
 import { canUpdateFields, canAccessRestaurant, PERMISSION_ERRORS } from '@restaurant-inventory/shared';
 import { createClient } from '../supabase';
 import { isDemoMode } from '../demo-mode';
@@ -15,7 +18,7 @@ interface InventoryState {
   // Actions
   fetchItems: () => Promise<void>;
   fetchSuppliers: () => Promise<void>;
-  addItem: (item: InventoryItemInput) => Promise<void>;
+  addItem: (item: InventoryItemInputWithStock) => Promise<void>;
   updateItem: (id: string, updates: Partial<InventoryItem>) => Promise<void>;
   deleteItem: (id: string) => Promise<void>;
   addSupplier: (supplier: Omit<Supplier, 'id' | 'created_at' | 'updated_at'>) => Promise<void>;
@@ -74,7 +77,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
     }
   },
 
-  addItem: async (item: InventoryItemInput) => {
+  addItem: async (item: InventoryItemInputWithStock) => {
     set({ loading: true, error: null });
     try {
       if (isDemoMode()) {
@@ -85,7 +88,6 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         const newItem = {
           ...item,
           id: `item-${Date.now()}`,
-          current_stock: 0, // New items start with 0 stock
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         };
@@ -149,15 +151,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
         set(state => {
           const updatedItems = state.items.map(item => {
             if (item.id === id) {
-              const updatedItem = { ...item, ...updates, updated_at: new Date().toISOString() };
-
-              // Update supplier info if supplier_id changed
-              if (updates.supplier_id !== undefined) {
-                const supplier = mockSuppliers.find(s => s.id === updates.supplier_id);
-                updatedItem.suppliers = supplier ? { name: supplier.name } : null;
-              }
-
-              return updatedItem;
+              return { ...item, ...updates, updated_at: new Date().toISOString() };
             }
             return item;
           });

@@ -35,7 +35,7 @@ export class SyncManager {
     // Get unsynced transactions
     const unsyncedTransactions = await offlineDB.stockTransactions
       .where('synced')
-      .equals(false)
+      .equals(0 as any) // Dexie stores boolean as 0/1
       .toArray();
 
     for (const transaction of unsyncedTransactions) {
@@ -65,6 +65,7 @@ export class SyncManager {
       ...transaction,
       id: `offline_${Date.now()}_${Math.random()}`,
       created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString(),
       synced: false,
     };
 

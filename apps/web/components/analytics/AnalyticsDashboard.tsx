@@ -105,7 +105,7 @@ export default function AnalyticsDashboard() {
         {data && (period === 'daily' ? data.daily_usage : data.weekly_usage).length > 0 ? (
           <div className="space-y-4">
             {(period === 'daily' ? data.daily_usage : data.weekly_usage).map((usage, index) => {
-              const dateKey = period === 'daily' ? usage.date : (usage as any).week;
+              const dateKey = 'date' in usage ? usage.date : usage.week;
               return (
                 <div key={index} className="border-b border-gray-200 pb-4">
                   <h4 className="font-medium text-gray-900 mb-2">{dateKey}</h4>
