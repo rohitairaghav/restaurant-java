@@ -10,6 +10,9 @@ import type { Supplier } from '@restaurant-inventory/shared';
 jest.mock('@/lib/stores/inventory');
 jest.mock('@/lib/stores/auth');
 
+// Suppress React act warnings that surface via console.error during userEvent typing
+const mockConsoleError = jest.spyOn(console, 'error').mockImplementation(() => {});
+
 const mockUseInventoryStore = useInventoryStore as jest.MockedFunction<typeof useInventoryStore>;
 const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
 
@@ -70,6 +73,10 @@ describe('SupplierForm', () => {
         cannot: jest.fn().mockReturnValue(false),
       },
     });
+  });
+
+  afterAll(() => {
+    mockConsoleError.mockRestore();
   });
 
   it('should render add supplier form', () => {
