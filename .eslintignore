@@ -1,0 +1,13 @@
+node_modules/
+dist/
+coverage/
+*.config.js
+*.config.cjs
+apps/web/.next/
+apps/web/coverage/
+apps/mobile/node_modules/
+apps/mobile/dist/
+apps/mobile/coverage/
+packages/**/dist/
+packages/**/coverage/
+
