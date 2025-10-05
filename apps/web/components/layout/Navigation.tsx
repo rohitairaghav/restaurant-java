@@ -3,7 +3,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuthStore } from '@/lib/stores/auth';
 import { useAlertsStore } from '@/lib/stores/alerts';
-import { Package, TrendingUp, AlertCircle, LogOut, Menu, X, Users, Truck, FileBarChart } from 'lucide-react';
+import { Package, TrendingUp, AlertCircle, LogOut, Menu, X, Users, Truck, FileText } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import OfflineStatus from '../offline/OfflineStatus';
@@ -48,7 +48,7 @@ export default function Navigation() {
     {
       href: '/dashboard/reports',
       label: 'Reports',
-      icon: FileBarChart,
+      icon: FileText,
       roles: ['manager'],
     },
     {

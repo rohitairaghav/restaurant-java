@@ -22,6 +22,8 @@ jest.mock('lucide-react', () => ({
   Menu: () => <div>Menu</div>,
   X: () => <div>X</div>,
   Users: () => <div>Users</div>,
+  Truck: () => <div>Truck</div>,
+  FileText: () => <div>FileText</div>,
 }));
 
 const mockUseAuthStore = useAuthStore as jest.MockedFunction<typeof useAuthStore>;
@@ -114,6 +116,7 @@ describe('Navigation', () => {
       expect(screen.getByText('Stock Tracking')).toBeInTheDocument();
       expect(screen.getByText('Alerts')).toBeInTheDocument();
       expect(screen.getByText('Analytics')).toBeInTheDocument();
+      expect(screen.getByText('Reports')).toBeInTheDocument();
       expect(screen.getByText('User Administration')).toBeInTheDocument();
     });
 
@@ -132,6 +135,7 @@ describe('Navigation', () => {
       expect(screen.getByText('Stock Tracking')).toBeInTheDocument();
       expect(screen.getByText('Alerts')).toBeInTheDocument();
       expect(screen.queryByText('Analytics')).not.toBeInTheDocument();
+      expect(screen.queryByText('Reports')).not.toBeInTheDocument();
       expect(screen.queryByText('User Administration')).not.toBeInTheDocument();
     });
 
