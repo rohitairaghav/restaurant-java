@@ -55,6 +55,7 @@ CREATE TABLE stock_transactions (
   item_id UUID REFERENCES inventory_items(id) ON DELETE CASCADE,
   type VARCHAR(10) NOT NULL CHECK (type IN ('in', 'out')),
   quantity DECIMAL(10,2) NOT NULL,
+  cost DECIMAL(10,2),
   reason VARCHAR(50) NOT NULL CHECK (reason IN ('purchase', 'delivery', 'sale', 'waste', 'transfer')),
   sku VARCHAR(100),
   notes TEXT,
@@ -146,6 +147,7 @@ CREATE OR REPLACE FUNCTION update_stock_transaction(
   new_item_id UUID,
   new_type VARCHAR(10),
   new_quantity DECIMAL(10,2),
+  new_cost DECIMAL(10,2),
   new_reason VARCHAR(50),
   new_sku VARCHAR(100),
   new_notes TEXT
@@ -256,6 +258,7 @@ BEGIN
     item_id = COALESCE(new_item_id, old_transaction.item_id),
     type = COALESCE(new_type, old_transaction.type),
     quantity = COALESCE(new_quantity, old_transaction.quantity),
+    cost = COALESCE(new_cost, old_transaction.cost),
     reason = COALESCE(new_reason, old_transaction.reason),
     sku = COALESCE(new_sku, old_transaction.sku),
     notes = COALESCE(new_notes, old_transaction.notes)

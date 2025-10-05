@@ -42,7 +42,12 @@ export const useStockStore = create<StockState>((set, get) => ({
           };
         });
 
-        set({ transactions: transactionsWithData, loading: false });
+        // Sort by created_at descending (latest first)
+        const sortedTransactions = transactionsWithData.sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+
+        set({ transactions: sortedTransactions, loading: false });
         return;
       }
 
@@ -198,6 +203,7 @@ export const useStockStore = create<StockState>((set, get) => ({
         new_item_id: updates.item_id || null,
         new_type: updates.type || null,
         new_quantity: updates.quantity || null,
+        new_cost: updates.cost || null,
         new_reason: updates.reason || null,
         new_sku: updates.sku || null,
         new_notes: updates.notes || null,

@@ -40,7 +40,11 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       if (isDemoMode()) {
         // Simulate network delay
         await new Promise(resolve => setTimeout(resolve, 500));
-        set({ items: mockInventoryItems, loading: false });
+        // Sort by created_at descending (latest first)
+        const sortedItems = [...mockInventoryItems].sort((a, b) =>
+          new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+        );
+        set({ items: sortedItems, loading: false });
         return;
       }
 
@@ -48,7 +52,7 @@ export const useInventoryStore = create<InventoryState>((set, get) => ({
       const { data, error } = await supabase
         .from('inventory_items')
         .select('*, suppliers(name)')
-        .order('name');
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       set({ items: data || [], loading: false });
