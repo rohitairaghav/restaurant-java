@@ -1,3 +1,5 @@
+const path = require('path')
+
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   experimental: {
@@ -7,6 +9,12 @@ const nextConfig = {
     domains: ['supabase.co'],
   },
   transpilePackages: ['@restaurant-inventory/shared'],
+  webpack: (config, { isServer }) => {
+    // Add alias for the shared package
+    config.resolve.alias['@restaurant-inventory/shared'] = path.resolve(__dirname, '../../packages/shared/index.ts')
+
+    return config
+  },
   async headers() {
     return [
       {
