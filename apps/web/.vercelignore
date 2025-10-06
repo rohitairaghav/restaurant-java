@@ -1,0 +1,2 @@
+# Don't upload node_modules (Vercel will skip install if we configure it)
+node_modules

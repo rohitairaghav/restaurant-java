@@ -47,32 +47,24 @@ jobs:
         run: npm run lint
         working-directory: apps/web
 
-      - name: Build
+      - name: Build with npm (not Vercel)
         run: npm run build
         working-directory: apps/web
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
 
-      - name: Set package manager environment
-        run: |
-          echo "NPM_CONFIG_PACKAGE_MANAGER=npm" >> $GITHUB_ENV
-          echo "PACKAGE_MANAGER=npm" >> $GITHUB_ENV
-          echo "VERCEL_PACKAGE_MANAGER=npm" >> $GITHUB_ENV
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
 
-      - name: Verify deployment setup
+      - name: Deploy to Vercel (production)
         run: |
-          echo "Current directory: $(pwd)"
-          echo "Contents of apps/web:"
-          ls -la apps/web/
-          echo "Package.json exists: $(test -f apps/web/package.json && echo 'YES' || echo 'NO')"
-          echo "Vercel.json exists: $(test -f vercel.json && echo 'YES' || echo 'NO')"
-
-      - name: Deploy to Vercel
-        uses: amondnet/vercel-action@v25.2.0
-        with:
-          vercel-token: ${{ secrets.VERCEL_TOKEN }}
-          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}
-          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}
-          working-directory: apps/web
-          vercel-args: '--prod'
+          echo "Deploying to Vercel..."
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes > deployment-url.txt 2>&1
+          cat deployment-url.txt
+          DEPLOYMENT_URL=$(cat deployment-url.txt | grep -Eo 'https://[^/]+\.vercel\.app' | head -1)
+          echo "Deployed to: $DEPLOYMENT_URL"
+        working-directory: apps/web
+        env:
+          VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+          VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
