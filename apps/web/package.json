@@ -23,7 +23,6 @@
     "db:create-auth-users": "cd ../../supabase/liquibase && node scripts/create-auth-users.js"
   },
   "dependencies": {
-    "@restaurant-inventory/shared": "*",
     "@supabase/auth-helpers-nextjs": "^0.8.0",
     "@supabase/supabase-js": "^2.38.0",
     "clsx": "^2.0.0",
