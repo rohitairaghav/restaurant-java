@@ -59,9 +59,11 @@ jobs:
 
       - name: Deploy to Vercel (production)
         run: |
-          DEPLOYMENT_URL=$(vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} 2>&1 | grep -Eo 'https://[^ ]+')
+          echo "Deploying to Vercel..."
+          vercel deploy --prod --token=${{ secrets.VERCEL_TOKEN }} --yes > deployment-url.txt 2>&1
+          cat deployment-url.txt
+          DEPLOYMENT_URL=$(cat deployment-url.txt | grep -Eo 'https://[^/]+\.vercel\.app' | head -1)
           echo "Deployed to: $DEPLOYMENT_URL"
-          echo "DEPLOYMENT_URL=$DEPLOYMENT_URL" >> $GITHUB_ENV
         working-directory: apps/web
         env:
           VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
