@@ -1,7 +1,7 @@
 {
-  "buildCommand": "npm run build --workspace=@restaurant-inventory/web",
+  "buildCommand": "cp -r packages/shared apps/web/node_modules/@restaurant-inventory/ && cd apps/web && npm run build",
   "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install",
+  "installCommand": "npm install --prefix apps/web",
   "framework": null
 }
 
