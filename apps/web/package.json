@@ -4,7 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "mkdir -p node_modules/@restaurant-inventory && cp -r ../../packages/shared node_modules/@restaurant-inventory/ && next build",
+    "vercel-build": "mkdir -p node_modules/@restaurant-inventory && cp -r ../../packages/shared node_modules/@restaurant-inventory/ 2>/dev/null || cp -r ../packages/shared node_modules/@restaurant-inventory/ || true && next build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
