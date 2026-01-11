@@ -27,6 +27,10 @@
     <include file="changelogs/v1.0.0/21-fix-helper-function.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/24-simplify-rls-policies.xml" relativeToChangelogFile="false"/>
     <include file="changelogs/v1.0.0/25-add-cost-to-stock-transactions.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/26-create-recipes-table.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/27-add-quantity-unit-to-recipes.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/28-add-unit-constraint-to-recipes.xml" relativeToChangelogFile="false"/>
+    <include file="changelogs/v1.0.0/29-create-sales-table.xml" relativeToChangelogFile="false"/>
 
     <!-- Future versions will be added here -->
     <!-- <include file="changelogs/v1.1.0/01-new-features.xml" relativeToChangelogFile="false"/> -->

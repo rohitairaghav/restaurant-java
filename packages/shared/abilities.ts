@@ -17,6 +17,8 @@ export type Subjects =
   | 'Restaurant'
   | 'AuditLog'
   | 'UserProfile'
+  | 'Recipe'
+  | 'Sale'
   | 'all';
 
 /**
@@ -94,6 +96,14 @@ export function defineAbilitiesFor(user: User | null): AppAbility {
 
     // Cannot manage other user profiles
     cannot(['create', 'update', 'delete'], 'UserProfile');
+
+    // Recipe permissions for staff
+    can(['read', 'create', 'update'], 'Recipe');
+    cannot('delete', 'Recipe');
+
+    // Sale permissions for staff
+    can(['read', 'create', 'update'], 'Sale');
+    cannot('delete', 'Sale');
   }
 
   return build();

@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Add CHECK constraint to unit column for security -->
+
+    <!--
+        IMPORTANT: This CHECK constraint must match RECIPE_UNITS constant
+        Source of Truth: packages/shared/constants.ts - RECIPE_UNITS
+
+        When updating allowed units:
+        1. Update RECIPE_UNITS in packages/shared/constants.ts
+        2. Create a new Liquibase migration to update this CHECK constraint
+        3. Run: npm run db:update
+    -->
+
+    <!-- Add CHECK constraint to enforce valid unit values -->
+    <changeSet id="28-1" author="system" context="dev,staging,prod">
+        <comment>Add CHECK constraint to recipes.unit to prevent manipulation of allowed values</comment>
+        <sql>
+            ALTER TABLE recipes
+            ADD CONSTRAINT check_recipe_unit
+            CHECK (
+                unit IS NULL OR
+                unit IN (
+                    'servings',
+                    'portions',
+                    'pieces',
+                    'kg',
+                    'g',
+                    'liters',
+                    'ml',
+                    'cups',
+                    'plates',
+                    'bowls',
+                    'batches'
+                )
+            );
+        </sql>
+        <rollback>
+            ALTER TABLE recipes DROP CONSTRAINT IF EXISTS check_recipe_unit;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

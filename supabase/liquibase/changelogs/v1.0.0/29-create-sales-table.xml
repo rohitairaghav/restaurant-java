@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Create sales table for Restaurant Inventory Management -->
+
+    <!-- Create sales table -->
+    <changeSet id="29-1" author="system" context="dev,staging,prod">
+        <comment>Create sales table to track recipe sales and inventory updates</comment>
+        <createTable tableName="sales">
+            <column name="id" type="UUID" defaultValueComputed="uuid_generate_v4()">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="recipe_id" type="BIGINT">
+                <constraints nullable="false" foreignKeyName="fk_sales_recipes" references="recipes(id)"/>
+            </column>
+            <column name="inventory_updated" type="BOOLEAN" defaultValueBoolean="false">
+                <constraints nullable="false"/>
+            </column>
+            <column name="quantity" type="DECIMAL(10,2)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="receipt_id" type="TEXT"/>
+            <column name="restaurant_id" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_sales_restaurants" references="restaurants(id)"/>
+            </column>
+            <column name="created_by" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_sales_created_by" references="auth.users(id)"/>
+            </column>
+            <column name="updated_by" type="UUID">
+                <constraints nullable="false" foreignKeyName="fk_sales_updated_by" references="auth.users(id)"/>
+            </column>
+            <column name="created_at" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+            <column name="updated_at" type="BIGINT">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+        <rollback>
+            <dropTable tableName="sales"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create index on recipe_id for performance -->
+    <changeSet id="29-2" author="system" context="dev,staging,prod">
+        <comment>Create index on sales.recipe_id for query performance</comment>
+        <createIndex tableName="sales" indexName="idx_sales_recipe_id">
+            <column name="recipe_id"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="sales" indexName="idx_sales_recipe_id"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create index on restaurant_id for performance -->
+    <changeSet id="29-3" author="system" context="dev,staging,prod">
+        <comment>Create index on sales.restaurant_id for query performance</comment>
+        <createIndex tableName="sales" indexName="idx_sales_restaurant_id">
+            <column name="restaurant_id"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="sales" indexName="idx_sales_restaurant_id"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create index on inventory_updated for filtering -->
+    <changeSet id="29-4" author="system" context="dev,staging,prod">
+        <comment>Create index on sales.inventory_updated for filtering pending updates</comment>
+        <createIndex tableName="sales" indexName="idx_sales_inventory_updated">
+            <column name="inventory_updated"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="sales" indexName="idx_sales_inventory_updated"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Create index on created_at for date range queries -->
+    <changeSet id="29-5" author="system" context="dev,staging,prod">
+        <comment>Create index on sales.created_at for date-based reporting</comment>
+        <createIndex tableName="sales" indexName="idx_sales_created_at">
+            <column name="created_at"/>
+        </createIndex>
+        <rollback>
+            <dropIndex tableName="sales" indexName="idx_sales_created_at"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Enable Row Level Security on sales table -->
+    <changeSet id="29-6" author="system" context="dev,staging,prod">
+        <comment>Enable Row Level Security on sales table</comment>
+        <sql>
+            ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
+        </sql>
+        <rollback>
+            ALTER TABLE sales DISABLE ROW LEVEL SECURITY;
+        </rollback>
+    </changeSet>
+
+    <!-- Create RLS policies for sales table -->
+    <changeSet id="29-7" author="system" context="dev,staging,prod">
+        <comment>Create RLS policies for sales table (restaurant isolation)</comment>
+        <sql>
+            -- Users can access sales from their own restaurant
+            CREATE POLICY "Users access own restaurant sales" ON sales
+                FOR ALL USING (
+                    restaurant_id IN (
+                        SELECT restaurant_id FROM user_profiles
+                        WHERE id = auth.uid()
+                    )
+                );
+        </sql>
+        <rollback>
+            DROP POLICY IF EXISTS "Users access own restaurant sales" ON sales;
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>

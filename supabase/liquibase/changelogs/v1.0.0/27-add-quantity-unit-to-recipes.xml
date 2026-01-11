@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog
+    xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                        http://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-4.24.xsd">
+
+    <!-- Add quantity and unit fields to recipes table -->
+
+    <!-- Add quantity column -->
+    <changeSet id="27-1" author="system" context="dev,staging,prod">
+        <comment>Add quantity column to recipes table</comment>
+        <addColumn tableName="recipes">
+            <column name="quantity" type="DECIMAL(10,2)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="recipes" columnName="quantity"/>
+        </rollback>
+    </changeSet>
+
+    <!-- Add unit column -->
+    <changeSet id="27-2" author="system" context="dev,staging,prod">
+        <comment>Add unit column to recipes table</comment>
+        <addColumn tableName="recipes">
+            <column name="unit" type="VARCHAR(50)">
+                <constraints nullable="true"/>
+            </column>
+        </addColumn>
+        <rollback>
+            <dropColumn tableName="recipes" columnName="unit"/>
+        </rollback>
+    </changeSet>
+
+</databaseChangeLog>
