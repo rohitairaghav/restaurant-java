@@ -12,21 +12,32 @@
 import { createClient } from '@supabase/supabase-js'
 import dotenv from 'dotenv'
 import path from 'path'
+import { getSupabaseConfigServer } from '@restaurant-inventory/shared'
 
 // Load environment variables from web app
 dotenv.config({ path: path.join(process.cwd(), '../../apps/web/.env.local') })
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY // This should be the service role key, not anon key
+// Get Supabase configuration using centralized config
+let supabaseConfig
+try {
+  supabaseConfig = getSupabaseConfigServer()
+} catch (error) {
+  console.error('❌ Failed to load Supabase configuration:', error.message)
+  console.error('Required environment variables:')
+  console.error('  - NEXT_PUBLIC_SUPABASE_URL or SUPABASE_URL')
+  console.error('  - NEXT_PUBLIC_SUPABASE_ANON_KEY or SUPABASE_ANON_KEY')
+  console.error('  - SUPABASE_SERVICE_ROLE_KEY (for admin operations)')
+  process.exit(1)
+}
 
-if (!supabaseUrl || !supabaseServiceKey) {
-  console.error('❌ Missing Supabase credentials in .env.local')
-  console.error('Required: NEXT_PUBLIC_SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY')
+if (!supabaseConfig.serviceRoleKey) {
+  console.error('❌ SUPABASE_SERVICE_ROLE_KEY is required for admin operations')
+  console.error('This script requires the service role key to create auth users')
   process.exit(1)
 }
 
 // Create Supabase client with service role key for user management
-const supabase = createClient(supabaseUrl, supabaseServiceKey, {
+const supabase = createClient(supabaseConfig.url, supabaseConfig.serviceRoleKey, {
   auth: {
     autoRefreshToken: false,
     persistSession: false

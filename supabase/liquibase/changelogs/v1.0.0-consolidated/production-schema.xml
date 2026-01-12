@@ -81,6 +81,7 @@
                 item_id UUID REFERENCES inventory_items(id) ON DELETE CASCADE,
                 type VARCHAR(10) NOT NULL CHECK (type IN ('in', 'out')),
                 quantity DECIMAL(10,2) NOT NULL,
+                cost DECIMAL(10,2),
                 reason VARCHAR(50) NOT NULL CHECK (reason IN ('purchase', 'delivery', 'sale', 'waste', 'transfer')),
                 sku VARCHAR(100),
                 notes TEXT,
@@ -115,6 +116,42 @@
                 restaurant_id UUID REFERENCES restaurants(id) ON DELETE CASCADE,
                 created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
             );
+
+            -- Create recipes table
+            CREATE TABLE recipes (
+                id BIGSERIAL PRIMARY KEY,
+                name VARCHAR(255) NOT NULL,
+                description TEXT,
+                status VARCHAR(20) NOT NULL CHECK (status IN ('Active', 'Disabled', 'Removed')),
+                quantity DECIMAL(10,2),
+                unit VARCHAR(50) CHECK (
+                    unit IS NULL OR
+                    unit IN (
+                        'servings', 'portions', 'pieces', 'kg', 'g',
+                        'liters', 'ml', 'cups', 'plates', 'bowls', 'batches'
+                    )
+                ),
+                created_by UUID NOT NULL REFERENCES auth.users(id),
+                updated_by UUID NOT NULL REFERENCES auth.users(id),
+                created_at BIGINT NOT NULL,
+                updated_at BIGINT NOT NULL,
+                content JSONB NOT NULL,
+                restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE
+            );
+
+            -- Create sales table
+            CREATE TABLE sales (
+                id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+                recipe_id BIGINT NOT NULL REFERENCES recipes(id) ON DELETE CASCADE,
+                inventory_updated BOOLEAN NOT NULL DEFAULT FALSE,
+                quantity DECIMAL(10,2) NOT NULL,
+                receipt_id TEXT,
+                restaurant_id UUID NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+                created_by UUID NOT NULL REFERENCES auth.users(id),
+                updated_by UUID NOT NULL REFERENCES auth.users(id),
+                created_at BIGINT NOT NULL,
+                updated_at BIGINT NOT NULL
+            );
         </sql>
     </changeSet>
 
@@ -138,6 +175,13 @@
             CREATE INDEX idx_audit_logs_user_id ON audit_logs(user_id);
             CREATE INDEX idx_audit_logs_table_name ON audit_logs(table_name);
             CREATE INDEX idx_audit_logs_created_at ON audit_logs(created_at);
+            CREATE INDEX idx_recipes_restaurant_id ON recipes(restaurant_id);
+            CREATE INDEX idx_recipes_status ON recipes(status);
+            CREATE INDEX idx_recipes_content_gin ON recipes USING GIN (content);
+            CREATE INDEX idx_sales_recipe_id ON sales(recipe_id);
+            CREATE INDEX idx_sales_restaurant_id ON sales(restaurant_id);
+            CREATE INDEX idx_sales_inventory_updated ON sales(inventory_updated);
+            CREATE INDEX idx_sales_created_at ON sales(created_at);
         </sql>
     </changeSet>
 
@@ -274,6 +318,8 @@
             ALTER TABLE stock_transactions ENABLE ROW LEVEL SECURITY;
             ALTER TABLE alerts ENABLE ROW LEVEL SECURITY;
             ALTER TABLE audit_logs ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE recipes ENABLE ROW LEVEL SECURITY;
+            ALTER TABLE sales ENABLE ROW LEVEL SECURITY;
 
             -- Service role has full access (for backend operations)
             CREATE POLICY "Service role full access" ON user_profiles
@@ -350,6 +396,22 @@
                 FOR SELECT TO authenticated
                 USING (
                     id IN (
+                        SELECT restaurant_id FROM user_profiles WHERE id = auth.uid()
+                    )
+                );
+
+            CREATE POLICY "Users access own restaurant recipes" ON recipes
+                FOR ALL TO authenticated
+                USING (
+                    restaurant_id IN (
+                        SELECT restaurant_id FROM user_profiles WHERE id = auth.uid()
+                    )
+                );
+
+            CREATE POLICY "Users access own restaurant sales" ON sales
+                FOR ALL TO authenticated
+                USING (
+                    restaurant_id IN (
                         SELECT restaurant_id FROM user_profiles WHERE id = auth.uid()
                     )
                 );
